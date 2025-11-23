@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'main_navigation_screen.dart';
 import '../services/auth_service.dart';
+import '../services/habit_service.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({Key? key}) : super(key: key);
@@ -14,14 +15,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final _authService = AuthService();
+  final _habitService = HabitService();
   String? _errorMessage;
+  bool _isLoading = false;
 
-  void _handleRegister() {
+  void _handleRegister() async {
     final username = _usernameController.text.trim();
     final password = _passwordController.text.trim();
     final confirmPassword = _confirmPasswordController.text.trim();
 
+    print('📝 REGISTER ATTEMPT');
+    print('Username: $username');
+    print('Password: $password');
+    print('Confirm: $confirmPassword');
+
     if (username.isEmpty || password.isEmpty || confirmPassword.isEmpty) {
+      print('❌ Ada field yang kosong');
       setState(() {
         _errorMessage = 'Semua field harus diisi!';
       });
@@ -29,6 +38,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
 
     if (password != confirmPassword) {
+      print('❌ Password tidak cocok');
       setState(() {
         _errorMessage = 'Password tidak cocok!';
       });
@@ -36,23 +46,58 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
 
     if (password.length < 6) {
+      print('❌ Password terlalu pendek');
       setState(() {
         _errorMessage = 'Password minimal 6 karakter!';
       });
       return;
     }
 
-    final success = _authService.register(username, password, confirmPassword);
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
 
-    if (success) {
-      _authService.login(username, password);
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const MainNavigationScreen()),
-      );
-    } else {
+    try {
+      print('📡 Calling registerAsync...');
+      final success = await _authService.registerAsync(username, password, confirmPassword);
+      print('Register result: $success');
+
+      if (success) {
+        print('✅ Register successful');
+        
+        // Login otomatis setelah register
+        print('📡 Auto-login...');
+        final loginSuccess = await _authService.loginAsync(username, password);
+        print('Auto-login result: $loginSuccess');
+        
+        if (loginSuccess) {
+          print('✅ Auto-login successful');
+          
+          // Initialize habits
+          print('📥 Initializing habits...');
+          await _habitService.initializeHabits();
+          print('✅ Habits initialized');
+
+          if (mounted) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const MainNavigationScreen()),
+            );
+          }
+        }
+      } else {
+        print('❌ Register failed');
+        setState(() {
+          _errorMessage = 'Username sudah digunakan atau error registrasi!';
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('❌ Register error: $e');
       setState(() {
-        _errorMessage = 'Username sudah digunakan!';
+        _errorMessage = 'Error: $e';
+        _isLoading = false;
       });
     }
   }
@@ -93,6 +138,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               const SizedBox(height: 8),
               TextField(
                 controller: _usernameController,
+                enabled: !_isLoading,
                 onChanged: (value) {
                   if (_errorMessage != null) {
                     setState(() {
@@ -130,6 +176,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               TextField(
                 controller: _passwordController,
                 obscureText: true,
+                enabled: !_isLoading,
                 onChanged: (value) {
                   if (_errorMessage != null) {
                     setState(() {
@@ -167,6 +214,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               TextField(
                 controller: _confirmPasswordController,
                 obscureText: true,
+                enabled: !_isLoading,
                 onChanged: (value) {
                   if (_errorMessage != null) {
                     setState(() {
@@ -174,7 +222,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     });
                   }
                 },
-                onSubmitted: (_) => _handleRegister(),
+                onSubmitted: (_) => _isLoading ? null : _handleRegister(),
                 decoration: InputDecoration(
                   hintText: 'Confirm your password',
                   hintStyle: TextStyle(color: Colors.grey[400]),
@@ -198,22 +246,32 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               const SizedBox(height: 24),
               ElevatedButton(
-                onPressed: _handleRegister,
+                onPressed: _isLoading ? null : _handleRegister,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.cyan[400],
+                  disabledBackgroundColor: Colors.grey[400],
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
-                child: const Text(
-                  'Register',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
-                ),
+                child: _isLoading
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Text(
+                        'Register',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
               ),
               const SizedBox(height: 24),
               Row(
@@ -235,14 +293,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 children: [
                   const Text('Sudah punya akun ? '),
                   GestureDetector(
-                    onTap: () {
-                      Navigator.pop(context);
-                    },
-                    child: const Text(
+                    onTap: _isLoading
+                        ? null
+                        : () {
+                            Navigator.pop(context);
+                          },
+                    child: Text(
                       'Login Sekarang',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         decoration: TextDecoration.underline,
+                        color: _isLoading ? Colors.grey : Colors.black,
                       ),
                     ),
                   ),

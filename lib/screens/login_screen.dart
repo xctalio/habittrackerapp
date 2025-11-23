@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'register_screen.dart';
 import 'main_navigation_screen.dart';
 import '../services/auth_service.dart';
+import '../services/habit_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -14,29 +15,66 @@ class _LoginScreenState extends State<LoginScreen> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   final _authService = AuthService();
+  final _habitService = HabitService();
   bool _showError = false;
+  bool _isLoading = false;
+  String? _errorMessage;
 
-  void _handleLogin() {
+  void _handleLogin() async {
     final username = _usernameController.text.trim();
     final password = _passwordController.text.trim();
 
+    print('🔐 LOGIN ATTEMPT');
+    print('Username: $username');
+    print('Password: $password');
+
     if (username.isEmpty || password.isEmpty) {
+      print('❌ Username atau password kosong');
       setState(() {
         _showError = true;
+        _errorMessage = 'Username dan password harus diisi!';
       });
       return;
     }
 
-    final success = _authService.login(username, password);
+    setState(() {
+      _isLoading = true;
+      _showError = false;
+    });
 
-    if (success) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const MainNavigationScreen()),
-      );
-    } else {
+    try {
+      print('📡 Calling loginAsync...');
+      final success = await _authService.loginAsync(username, password);
+      print('Login result: $success');
+
+      if (success) {
+        print('✅ Login successful');
+        
+        // Initialize habits dari Supabase
+        print('📥 Initializing habits...');
+        await _habitService.initializeHabits();
+        print('✅ Habits initialized');
+
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const MainNavigationScreen()),
+          );
+        }
+      } else {
+        print('❌ Login failed - credentials invalid');
+        setState(() {
+          _showError = true;
+          _errorMessage = 'Username atau Password salah!';
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('❌ Login error: $e');
       setState(() {
         _showError = true;
+        _errorMessage = 'Error: $e';
+        _isLoading = false;
       });
     }
   }
@@ -77,6 +115,7 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 8),
               TextField(
                 controller: _usernameController,
+                enabled: !_isLoading,
                 onChanged: (value) {
                   if (_showError) {
                     setState(() {
@@ -114,6 +153,7 @@ class _LoginScreenState extends State<LoginScreen> {
               TextField(
                 controller: _passwordController,
                 obscureText: true,
+                enabled: !_isLoading,
                 onChanged: (value) {
                   if (_showError) {
                     setState(() {
@@ -121,7 +161,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     });
                   }
                 },
-                onSubmitted: (_) => _handleLogin(),
+                onSubmitted: (_) => _isLoading ? null : _handleLogin(),
                 decoration: InputDecoration(
                   hintText: 'Enter your password',
                   hintStyle: TextStyle(color: Colors.grey[400]),
@@ -145,22 +185,32 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 24),
               ElevatedButton(
-                onPressed: _handleLogin,
+                onPressed: _isLoading ? null : _handleLogin,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.cyan[400],
+                  disabledBackgroundColor: Colors.grey[400],
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
-                child: const Text(
-                  'Login',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
-                ),
+                child: _isLoading
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Text(
+                        'Login',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
               ),
               const SizedBox(height: 24),
               Row(
@@ -182,19 +232,22 @@ class _LoginScreenState extends State<LoginScreen> {
                 children: [
                   const Text('Belum punya akun ? '),
                   GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const RegisterScreen(),
-                        ),
-                      );
-                    },
-                    child: const Text(
+                    onTap: _isLoading
+                        ? null
+                        : () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const RegisterScreen(),
+                              ),
+                            );
+                          },
+                    child: Text(
                       'Daftar Sekarang',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         decoration: TextDecoration.underline,
+                        color: _isLoading ? Colors.grey : Colors.black,
                       ),
                     ),
                   ),
@@ -204,7 +257,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 Padding(
                   padding: const EdgeInsets.only(top: 20),
                   child: Text(
-                    'Username dan Password Salah !',
+                    _errorMessage ?? 'Username dan Password Salah !',
                     style: TextStyle(color: Colors.red[600]),
                     textAlign: TextAlign.center,
                   ),

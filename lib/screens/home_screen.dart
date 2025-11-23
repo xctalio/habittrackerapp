@@ -19,7 +19,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _showDeleteDialog(String habitId, String habitTitle) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -41,14 +41,23 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           TextButton(
-            onPressed: () {
-              setState(() {
-                _habitService.deleteHabit(habitId);
-              });
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Habit berhasil dihapus')),
-              );
+            onPressed: () async {
+              try {
+                await _habitService.deleteHabit(habitId);
+                if (mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Habit berhasil dihapus')),
+                  );
+                  setState(() {});
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error: $e')),
+                  );
+                }
+              }
             },
             child: Text(
               'Hapus',
@@ -61,8 +70,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showEditDialog(String habitId) {
-    final habit = _habitService.getAllHabits().firstWhere((h) => h.id == habitId);
-    
+    final habit =
+        _habitService.getAllHabits().firstWhere((h) => h.id == habitId);
+
     showDialog(
       context: context,
       builder: (context) => EditHabitDialog(
@@ -81,7 +91,12 @@ class _HomeScreenState extends State<HomeScreen> {
     final completedCount = _habitService.getCompletedCountForDate(today);
     final totalCount = _habitService.getTotalCount();
     final progress = _habitService.getProgressForDate(today);
-    final username = _authService.currentUser?.username ?? 'User';
+
+    // Get username dari AuthService
+    final username = _authService.currentUsername ??
+        _authService.currentUser?.username ??
+        'User';
+
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
@@ -144,14 +159,18 @@ class _HomeScreenState extends State<HomeScreen> {
                             Icon(
                               Icons.event_note,
                               size: 80,
-                              color: isDark ? Colors.grey[700] : Colors.grey[300],
+                              color: isDark
+                                  ? Colors.grey[700]
+                                  : Colors.grey[300],
                             ),
                             const SizedBox(height: 16),
                             Text(
                               'Belum ada habit',
                               style: TextStyle(
                                 fontSize: 18,
-                                color: isDark ? Colors.grey[500] : Colors.grey[500],
+                                color: isDark
+                                    ? Colors.grey[500]
+                                    : Colors.grey[500],
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -160,7 +179,9 @@ class _HomeScreenState extends State<HomeScreen> {
                               'Tambahkan habit pertama Anda!',
                               style: TextStyle(
                                 fontSize: 14,
-                                color: isDark ? Colors.grey[600] : Colors.grey[400],
+                                color: isDark
+                                    ? Colors.grey[600]
+                                    : Colors.grey[400],
                               ),
                             ),
                           ],
@@ -189,35 +210,74 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                 ),
                                 direction: DismissDirection.endToStart,
-                                onDismissed: (direction) {
-                                  setState(() {
-                                    _habitService.deleteHabit(habit.id);
-                                  });
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: const Text('Habit dihapus'),
-                                      backgroundColor: isDark ? const Color(0xFF2C2C2C) : null,
-                                      action: SnackBarAction(
-                                        label: 'Undo',
-                                        textColor: Colors.cyan[400],
-                                        onPressed: () {
-                                          setState(() {
-                                            _habitService.addHabit(habit);
-                                          });
-                                        },
-                                      ),
-                                    ),
-                                  );
+                                onDismissed: (direction) async {
+                                  try {
+                                    await _habitService.deleteHabit(habit.id);
+                                    if (mounted) {
+                                      setState(() {});
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(
+                                          content: const Text('Habit dihapus'),
+                                          backgroundColor: isDark
+                                              ? const Color(0xFF2C2C2C)
+                                              : null,
+                                          action: SnackBarAction(
+                                            label: 'Undo',
+                                            textColor: Colors.cyan[400],
+                                            onPressed: () async {
+                                              try {
+                                                await _habitService
+                                                    .addHabit(habit);
+                                                if (mounted) {
+                                                  setState(() {});
+                                                }
+                                              } catch (e) {
+                                                if (mounted) {
+                                                  ScaffoldMessenger.of(context)
+                                                      .showSnackBar(
+                                                    SnackBar(
+                                                        content: Text(
+                                                            'Error: $e')),
+                                                  );
+                                                }
+                                              }
+                                            },
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                  } catch (e) {
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(content: Text('Error: $e')),
+                                      );
+                                    }
+                                  }
                                 },
                                 child: HabitTile(
                                   habit: habit,
                                   date: today,
-                                  onToggle: () {
-                                    setState(() {
-                                      _habitService.toggleHabit(habit.id, today);
-                                    });
+                                  onToggle: () async {
+                                    try {
+                                      await _habitService
+                                          .toggleHabit(habit.id, today);
+                                      if (mounted) {
+                                        setState(() {});
+                                      }
+                                    } catch (e) {
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          SnackBar(
+                                              content: Text('Error: $e')),
+                                        );
+                                      }
+                                    }
                                   },
-                                  onDelete: () => _showDeleteDialog(habit.id, habit.title),
+                                  onDelete: () =>
+                                      _showDeleteDialog(habit.id, habit.title),
                                   onEdit: () => _showEditDialog(habit.id),
                                 ),
                               ),

@@ -1,8 +1,32 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'config/supabase_config.dart';
 import 'screens/login_screen.dart';
 import 'services/theme_service.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Debug prints
+  print('═══════════════════════════════════════');
+  print('🚀 STARTING SUPABASE INITIALIZATION');
+  print('═══════════════════════════════════════');
+  print('Supabase URL: ${SupabaseConfig.url}');
+  print('Supabase Key: ${SupabaseConfig.anonKey.substring(0, 20)}...');
+  
+  try {
+    await Supabase.initialize(
+      url: SupabaseConfig.url,
+      anonKey: SupabaseConfig.anonKey,
+    );
+    print('✅ Supabase INITIALIZED SUCCESSFULLY');
+    print('═══════════════════════════════════════');
+  } catch (e) {
+    print('❌ SUPABASE INITIALIZATION FAILED:');
+    print('Error: $e');
+    print('═══════════════  ════════════════════════');
+  }
+  
   runApp(const HabitTrackerApp());
 }
 

@@ -54,7 +54,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.grid_view_outlined),
-            label: 'Habits',
+            label: 'Calendar',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.edit_outlined),

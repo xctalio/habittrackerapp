@@ -51,13 +51,22 @@ class _CalendarScreenState extends State<CalendarScreen> {
         date1.day == date2.day;
   }
 
-  void _deleteHabit(String habitId) {
-    setState(() {
-      _habitService.deleteHabit(habitId);
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Habit dihapus')),
-    );
+  void _deleteHabit(String habitId) async {
+    try {
+      await _habitService.deleteHabit(habitId);
+      if (mounted) {
+        setState(() {});
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Habit dihapus')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    }
   }
 
   @override
@@ -67,7 +76,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final completedCount = _habitService.getCompletedCountForDate(_selectedDate);
     final totalCount = _habitService.getTotalCount();
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Scaffold(
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -155,9 +164,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
                         final isToday = _isSameDay(date, DateTime.now());
                         final isSelected = _isSameDay(date, _selectedDate);
                         final isCurrentMonth = date.month == _currentMonth.month;
-                        final hasCompletion = _habitService.hasCompletionOnDate(date);
-                        final completionCount = _habitService.getCompletedCountForDate(date);
-                        
+                        final hasCompletion =
+                            _habitService.hasCompletionOnDate(date);
+                        final completionCount =
+                            _habitService.getCompletedCountForDate(date);
+
                         return GestureDetector(
                           onTap: () {
                             setState(() {
@@ -173,7 +184,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                       : Colors.transparent,
                               shape: BoxShape.circle,
                               border: isSelected && !isToday
-                                  ? Border.all(color: Colors.cyan[400]!, width: 2)
+                                  ? Border.all(
+                                      color: Colors.cyan[400]!, width: 2)
                                   : null,
                             ),
                             child: Stack(
@@ -199,7 +211,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                       children: List.generate(
                                         completionCount > 3 ? 3 : completionCount,
                                         (index) => Container(
-                                          margin: const EdgeInsets.symmetric(horizontal: 1),
+                                          margin: const EdgeInsets.symmetric(
+                                              horizontal: 1),
                                           width: 4,
                                           height: 4,
                                           decoration: const BoxDecoration(
@@ -232,7 +245,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
                       color: Colors.cyan[50],
                       borderRadius: BorderRadius.circular(20),
@@ -258,14 +272,18 @@ class _CalendarScreenState extends State<CalendarScreen> {
                             Icon(
                               Icons.event_busy,
                               size: 60,
-                              color: isDark ? Colors.grey[700] : Colors.grey[300],
+                              color: isDark
+                                  ? Colors.grey[700]
+                                  : Colors.grey[300],
                             ),
                             const SizedBox(height: 16),
                             Text(
                               'Tidak ada habit',
                               style: TextStyle(
                                 fontSize: 16,
-                                color: isDark ? Colors.grey[500] : Colors.grey[500],
+                                color: isDark
+                                    ? Colors.grey[500]
+                                    : Colors.grey[500],
                               ),
                             ),
                           ],
@@ -278,8 +296,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       itemCount: habits.length,
                       itemBuilder: (context, index) {
                         final habit = habits[index];
-                        final isCompleted = habit.isCompletedOnDate(_selectedDate);
-                        
+                        final isCompleted =
+                            habit.isCompletedOnDate(_selectedDate);
+
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 12),
                           child: Dismissible(
@@ -303,19 +322,35 @@ class _CalendarScreenState extends State<CalendarScreen> {
                             child: Container(
                               padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
-                                color: isDark ? const Color(0xFF2C2C2C) : Colors.white,
+                                color: isDark
+                                    ? const Color(0xFF2C2C2C)
+                                    : Colors.white,
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
-                                  color: isDark ? Colors.grey[800]! : Colors.grey[300]!,
+                                  color: isDark
+                                      ? Colors.grey[800]!
+                                      : Colors.grey[300]!,
                                 ),
                               ),
                               child: Row(
                                 children: [
                                   GestureDetector(
-                                    onTap: () {
-                                      setState(() {
-                                        _habitService.toggleHabit(habit.id, _selectedDate);
-                                      });
+                                    onTap: () async {
+                                      try {
+                                        await _habitService.toggleHabit(
+                                            habit.id, _selectedDate);
+                                        if (mounted) {
+                                          setState(() {});
+                                        }
+                                      } catch (e) {
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            SnackBar(
+                                                content: Text('Error: $e')),
+                                          );
+                                        }
+                                      }
                                     },
                                     child: Container(
                                       width: 24,
@@ -324,7 +359,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                         shape: BoxShape.circle,
                                         color: isCompleted
                                             ? Colors.black
-                                            : (isDark ? const Color(0xFF1E1E1E) : Colors.white),
+                                            : (isDark
+                                                ? const Color(0xFF1E1E1E)
+                                                : Colors.white),
                                         border: Border.all(
                                           color: isCompleted
                                               ? Colors.black
@@ -352,8 +389,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                             ? TextDecoration.lineThrough
                                             : TextDecoration.none,
                                         color: isCompleted
-                                            ? (isDark ? Colors.grey[600] : Colors.grey)
-                                            : (isDark ? Colors.white : Colors.black),
+                                            ? (isDark
+                                                ? Colors.grey[600]
+                                                : Colors.grey)
+                                            : (isDark
+                                                ? Colors.white
+                                                : Colors.black),
                                       ),
                                       maxLines: 2,
                                       overflow: TextOverflow.ellipsis,

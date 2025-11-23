@@ -21,7 +21,7 @@ class _NewHabitScreenState extends State<NewHabitScreen> {
     {'name': 'pink', 'color': Colors.pink},
   ];
 
-  void _saveHabit() {
+  void _saveHabit() async {
     if (_titleController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Judul habit tidak boleh kosong!')),
@@ -29,25 +29,32 @@ class _NewHabitScreenState extends State<NewHabitScreen> {
       return;
     }
 
-    final habit = Habit(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      title: _titleController.text.trim(),
-      createdAt: DateTime.now(),
-      color: _selectedColor,
-    );
+    try {
+      final habit = Habit(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        title: _titleController.text.trim(),
+        createdAt: DateTime.now(),
+        color: _selectedColor,
+      );
 
-    _habitService.addHabit(habit);
-    Navigator.pop(context, true);
+      await _habitService.addHabit(habit); // Tambah await
+
+      if (mounted) {
+        Navigator.pop(context, true);
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('New Habit'),
-      ),
+      appBar: AppBar(title: const Text('New Habit')),
       body: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Column(
@@ -125,10 +132,7 @@ class _NewHabitScreenState extends State<NewHabitScreen> {
                         ),
                       ),
                       child: isSelected
-                          ? const Icon(
-                              Icons.check,
-                              color: Colors.white,
-                            )
+                          ? const Icon(Icons.check, color: Colors.white)
                           : null,
                     ),
                   ),

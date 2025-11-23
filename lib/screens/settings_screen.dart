@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'login_screen.dart';
+import '../services/auth_service.dart';
+import '../services/theme_service.dart';
+import '../services/habit_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({Key? key}) : super(key: key);
@@ -10,17 +14,214 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   final _authService = AuthService();
   final _themeService = ThemeService();
+  final _habitService = HabitService();
+  bool _notificationsEnabled = true;
+
+  void _showProfileDialog() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final username = _authService.currentUsername ?? 'Unknown';
+    final userId = _authService.currentUserId ?? 'N/A';
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: isDark ? const Color(0xFF2C2C2C) : Colors.white,
+        title: Text(
+          'Profile',
+          style: TextStyle(color: isDark ? Colors.white : Colors.black),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E1E1E) : Colors.cyan[50],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 24,
+                        backgroundColor: Colors.cyan[400],
+                        child: Text(
+                          username.isNotEmpty
+                              ? username[0].toUpperCase()
+                              : 'U',
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              username,
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color:
+                                    isDark ? Colors.white : Colors.black,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'ID: $userId',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: isDark
+                                    ? Colors.grey[400]
+                                    : Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Total Habits: ${_habitService.getTotalCount()}',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: isDark ? Colors.grey[300] : Colors.grey[700],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Close',
+              style: TextStyle(color: Colors.cyan[400]),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showClearCacheDialog() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: isDark ? const Color(0xFF2C2C2C) : Colors.white,
+        title: Text(
+          'Clear Cache',
+          style: TextStyle(color: isDark ? Colors.white : Colors.black),
+        ),
+        content: Text(
+          'Hapus semua data lokal? Data di server akan tetap aman.',
+          style: TextStyle(color: isDark ? Colors.white70 : Colors.black87),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Batal',
+              style: TextStyle(color: isDark ? Colors.white70 : Colors.black54),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              _habitService.resetInitialization();
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Cache berhasil dihapus')),
+              );
+            },
+            child: Text(
+              'Hapus',
+              style: TextStyle(color: Colors.red[400]),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showLogoutDialog() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: isDark ? const Color(0xFF2C2C2C) : Colors.white,
+        title: Text(
+          'Logout',
+          style: TextStyle(color: isDark ? Colors.white : Colors.black),
+        ),
+        content: Text(
+          'Apakah Anda yakin ingin logout?',
+          style: TextStyle(color: isDark ? Colors.white70 : Colors.black87),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Batal',
+              style: TextStyle(color: isDark ? Colors.white70 : Colors.black54),
+            ),
+          ),
+          TextButton(
+            onPressed: () async {
+              try {
+                await _authService.logoutAsync();
+                _habitService.resetInitialization();
+                if (mounted) {
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const LoginScreen(),
+                    ),
+                    (route) => false,
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error: $e')),
+                  );
+                }
+              }
+            },
+            child: Text(
+              'Logout',
+              style: TextStyle(color: Colors.red[400]),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    final username = _authService.currentUser?.username ?? 'User';
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final username = _authService.currentUsername ?? 'User';
 
     return Scaffold(
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            // Header Profile
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -33,7 +234,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     radius: 30,
                     backgroundColor: Colors.cyan[400],
                     child: Text(
-                      username[0].toUpperCase(),
+                      username.isNotEmpty ? username[0].toUpperCase() : 'U',
                       style: const TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
@@ -42,53 +243,49 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   ),
                   const SizedBox(width: 16),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        username,
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: isDark ? Colors.white : Colors.black,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          username,
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? Colors.white : Colors.black,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Habit Tracker User',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: isDark ? Colors.grey[400] : Colors.grey[600],
+                        const SizedBox(height: 4),
+                        Text(
+                          'Manage your account',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: isDark
+                                ? Colors.grey[400]
+                                : Colors.grey[600],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 24),
+
+            // ACCOUNT SECTION
+            _buildSectionTitle('Account'),
             _buildListTile(
               context,
               icon: Icons.person_outline,
-              title: 'Account Preferences',
-              onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Fitur dalam pengembangan')),
-                );
-              },
+              title: 'View Profile',
+              onTap: _showProfileDialog,
             ),
             Divider(color: Theme.of(context).dividerColor),
-            _buildListTile(
-              context,
-              icon: Icons.notifications_outlined,
-              title: 'Notifications',
-              onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Fitur dalam pengembangan')),
-                );
-              },
-            ),
-            Divider(color: Theme.of(context).dividerColor),
+            const SizedBox(height: 12),
+
+            // PREFERENCES SECTION
+            _buildSectionTitle('Preferences'),
             ListTile(
               leading: Icon(
                 Icons.dark_mode_outlined,
@@ -111,58 +308,72 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
             Divider(color: Theme.of(context).dividerColor),
+            ListTile(
+              leading: Icon(
+                Icons.notifications_outlined,
+                color: isDark ? Colors.white : Colors.black,
+              ),
+              title: Text(
+                'Notifications',
+                style: TextStyle(
+                  color: isDark ? Colors.white : Colors.black,
+                ),
+              ),
+              trailing: Switch(
+                value: _notificationsEnabled,
+                onChanged: (value) {
+                  setState(() {
+                    _notificationsEnabled = value;
+                  });
+                },
+                activeColor: Colors.cyan[400],
+              ),
+            ),
+            Divider(color: Theme.of(context).dividerColor),
+            const SizedBox(height: 12),
+
+            // DATA SECTION
+            _buildSectionTitle('Data & Privacy'),
+            _buildListTile(
+              context,
+              icon: Icons.delete_sweep_outlined,
+              title: 'Clear Cache',
+              subtitle: 'Remove local data',
+              onTap: _showClearCacheDialog,
+            ),
+            Divider(color: Theme.of(context).dividerColor),
+            const SizedBox(height: 12),
+
+            // HELP SECTION
+            _buildSectionTitle('Help & Support'),
             _buildListTile(
               context,
               icon: Icons.help_outline,
               title: 'Help & Support',
               onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Fitur dalam pengembangan')),
-                );
-              },
-            ),
-            Divider(color: Theme.of(context).dividerColor),
-            ListTile(
-              leading: Icon(Icons.logout, color: Colors.red[400]),
-              title: Text(
-                'Logout',
-                style: TextStyle(color: Colors.red[400]),
-              ),
-              onTap: () {
                 showDialog(
                   context: context,
                   builder: (context) => AlertDialog(
-                    backgroundColor: isDark ? const Color(0xFF2C2C2C) : Colors.white,
+                    backgroundColor:
+                        isDark ? const Color(0xFF2C2C2C) : Colors.white,
                     title: Text(
-                      'Logout',
-                      style: TextStyle(color: isDark ? Colors.white : Colors.black),
+                      'Help & Support',
+                      style: TextStyle(
+                        color: isDark ? Colors.white : Colors.black,
+                      ),
                     ),
                     content: Text(
-                      'Apakah Anda yakin ingin logout?',
-                      style: TextStyle(color: isDark ? Colors.white70 : Colors.black87),
+                      'Untuk bantuan lebih lanjut, hubungi:\n\nEmail: support@habittracker.com\n\nFollow social media kami untuk tips dan trik menggunakan aplikasi.',
+                      style: TextStyle(
+                        color: isDark ? Colors.white70 : Colors.black87,
+                      ),
                     ),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.pop(context),
                         child: Text(
-                          'Batal',
-                          style: TextStyle(color: isDark ? Colors.white70 : Colors.black54),
-                        ),
-                      ),
-                      TextButton(
-                        onPressed: () {
-                          _authService.logout();
-                          Navigator.pushAndRemoveUntil(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const LoginScreen(),
-                            ),
-                            (route) => false,
-                          );
-                        },
-                        child: Text(
-                          'Logout',
-                          style: TextStyle(color: Colors.red[400]),
+                          'Close',
+                          style: TextStyle(color: Colors.cyan[400]),
                         ),
                       ),
                     ],
@@ -170,7 +381,73 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 );
               },
             ),
+            Divider(color: Theme.of(context).dividerColor),
+            _buildListTile(
+              context,
+              icon: Icons.info_outline,
+              title: 'About',
+              onTap: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    backgroundColor:
+                        isDark ? const Color(0xFF2C2C2C) : Colors.white,
+                    title: Text(
+                      'About Habit Tracker',
+                      style: TextStyle(
+                        color: isDark ? Colors.white : Colors.black,
+                      ),
+                    ),
+                    content: Text(
+                      'Habit Tracker v1.0\n\nA simple and effective app to build better habits with Supabase backend.\n\n© 2024 Habit Tracker. All rights reserved.',
+                      style: TextStyle(
+                        color: isDark ? Colors.white70 : Colors.black87,
+                      ),
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: Text(
+                          'Close',
+                          style: TextStyle(color: Colors.cyan[400]),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+            Divider(color: Theme.of(context).dividerColor),
+            const SizedBox(height: 24),
+
+            // LOGOUT BUTTON
+            ListTile(
+              leading: Icon(Icons.logout, color: Colors.red[400]),
+              title: Text(
+                'Logout',
+                style: TextStyle(color: Colors.red[400]),
+              ),
+              onTap: _showLogoutDialog,
+            ),
+            const SizedBox(height: 32),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Text(
+        title,
+        style: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.bold,
+          color: isDark ? Colors.cyan[400] : Colors.cyan[700],
+          letterSpacing: 0.5,
         ),
       ),
     );
@@ -180,10 +457,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     BuildContext context, {
     required IconData icon,
     required String title,
+    String? subtitle,
     required VoidCallback onTap,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return ListTile(
       leading: Icon(
         icon,
@@ -195,6 +473,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
           color: isDark ? Colors.white : Colors.black,
         ),
       ),
+      subtitle: subtitle != null
+          ? Text(
+              subtitle,
+              style: TextStyle(
+                fontSize: 12,
+                color: isDark ? Colors.grey[500] : Colors.grey[600],
+              ),
+            )
+          : null,
       trailing: Icon(
         Icons.arrow_forward_ios,
         size: 16,
