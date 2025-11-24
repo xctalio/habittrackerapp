@@ -4,6 +4,7 @@ import 'config/supabase_config.dart';
 import 'screens/login_screen.dart';
 import 'services/theme_service.dart';
 
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   

@@ -16,47 +16,80 @@ class HabitService {
     return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
   }
 
-  /// Initialize habits dari database
+  /// Initialize habits dari database + load completion dates
   Future<void> initializeHabits() async {
     if (_isInitialized) return;
 
     try {
-      print('🔄 Initializing habits...');
+      print('Initializing habits...');
       final userId = _authService.getCurrentUserId();
-      
+
       if (userId == null) {
-        print('❌ User not logged in');
+        print('User not logged in');
         return;
       }
 
-      print('📥 Loading habits for user: $userId');
-      
+      print('Loading habits for user: $userId');
+
       // Load habits dari Supabase
-      final response = await _supabase
+      final habitsResponse = await _supabase
           .from('habits')
           .select()
           .eq('user_id', userId);
 
-      print('📦 Response: $response');
+      print('Habits Response: $habitsResponse');
 
       _habits.clear();
-      
-      for (var habitData in response) {
+
+      for (var habitData in habitsResponse) {
+        final habitId = habitData['id'] as String;
         final habit = Habit(
-          id: habitData['id'] as String,
+          id: habitId,
           title: habitData['title'] as String,
           createdAt: DateTime.parse(habitData['created_at'] as String),
           color: habitData['color'] as String?,
         );
         _habits.add(habit);
-        print('✅ Loaded habit: ${habit.title}');
+        print('Loaded habit: ${habit.title}');
+
+        // Load completion dates untuk habit ini
+        await _loadCompletionDatesForHabit(habitId);
       }
 
       _isInitialized = true;
-      print('✅ Habits initialized successfully (${_habits.length} habits)');
+      print('Habits initialized successfully (${_habits.length} habits)');
     } catch (e) {
-      print('❌ Error initializing habits: $e');
+      print('Error initializing habits: $e');
       rethrow;
+    }
+  }
+
+  /// Load completion dates untuk satu habit
+  Future<void> _loadCompletionDatesForHabit(String habitId) async {
+    try {
+      print('Loading completion dates for habit: $habitId');
+
+      final response = await _supabase
+          .from('habit_completions')
+          .select()
+          .eq('habit_id', habitId);
+
+      final habitIndex = _habits.indexWhere((h) => h.id == habitId);
+
+      if (habitIndex != -1) {
+        final habit = _habits[habitIndex];
+        habit.completionDates.clear();
+
+        for (var item in response) {
+          final dateKey = item['completed_date'] as String;
+          final isCompleted = item['is_completed'] as bool;
+          habit.completionDates[dateKey] = isCompleted;
+        }
+
+        print('Loaded ${response.length} completion dates for habit: $habitId');
+      }
+    } catch (e) {
+      print('Error loading completion dates for $habitId: $e');
     }
   }
 
@@ -75,7 +108,7 @@ class HabitService {
   Future<void> addHabit(Habit habit) async {
     try {
       final userId = _authService.getCurrentUserId();
-      
+
       if (userId == null) {
         throw Exception('User not logged in');
       }
@@ -85,7 +118,7 @@ class HabitService {
         throw Exception('Habit with id ${habit.id} already exists');
       }
 
-      print('💾 Saving habit to database: ${habit.title}');
+      print('Saving habit to database: ${habit.title}');
 
       // Insert ke Supabase
       await _supabase.from('habits').insert({
@@ -98,9 +131,9 @@ class HabitService {
 
       // Add ke memory
       _habits.add(habit);
-      print('✅ Habit saved successfully');
+      print('Habit saved successfully');
     } catch (e) {
-      print('❌ Error adding habit: $e');
+      print('Error adding habit: $e');
       rethrow;
     }
   }
@@ -109,25 +142,28 @@ class HabitService {
   Future<void> updateHabit(String id, Habit updatedHabit) async {
     try {
       final index = _habits.indexWhere((h) => h.id == id);
-      
+
       if (index == -1) {
         throw Exception('Habit with id $id not found');
       }
 
-      print('📝 Updating habit: $id');
+      print('Updating habit: $id');
 
       // Update di Supabase
-      await _supabase.from('habits').update({
-        'title': updatedHabit.title,
-        'color': updatedHabit.color,
-        'updated_at': DateTime.now().toIso8601String(),
-      }).eq('id', id);
+      await _supabase
+          .from('habits')
+          .update({
+            'title': updatedHabit.title,
+            'color': updatedHabit.color,
+            'updated_at': DateTime.now().toIso8601String(),
+          })
+          .eq('id', id);
 
       // Update di memory
       _habits[index] = updatedHabit;
-      print('✅ Habit updated successfully');
+      print('Habit updated successfully');
     } catch (e) {
-      print('❌ Error updating habit: $e');
+      print('Error updating habit: $e');
       rethrow;
     }
   }
@@ -135,16 +171,16 @@ class HabitService {
   /// Delete habit dari database dan memory
   Future<void> deleteHabit(String id) async {
     try {
-      print('🗑️ Deleting habit: $id');
+      print('Deleting habit: $id');
 
       // Delete dari Supabase (akan cascade delete habit_completions)
       await _supabase.from('habits').delete().eq('id', id);
 
       // Delete dari memory
       _habits.removeWhere((h) => h.id == id);
-      print('✅ Habit deleted successfully');
+      print('Habit deleted successfully');
     } catch (e) {
-      print('❌ Error deleting habit: $e');
+      print('Error deleting habit: $e');
       rethrow;
     }
   }
@@ -157,57 +193,36 @@ class HabitService {
       final currentStatus = habit.isCompletedOnDate(date);
       final newStatus = !currentStatus;
 
-      print('🔄 Toggling habit $id on $dateKey: $currentStatus -> $newStatus');
+      print('Toggling habit $id on $dateKey: $currentStatus -> $newStatus');
 
-      // Update di Supabase
-      if (newStatus) {
-        // Mark as completed
-        await _supabase.from('habit_completions').upsert({
-          'habit_id': id,
-          'completed_date': dateKey,
-          'is_completed': true,
-        }, onConflict: 'habit_id,completed_date');
-        print('✅ Marked as completed');
-      } else {
-        // Mark as incomplete
-        await _supabase.from('habit_completions').upsert({
-          'habit_id': id,
-          'completed_date': dateKey,
-          'is_completed': false,
-        }, onConflict: 'habit_id,completed_date');
-        print('✅ Marked as incomplete');
-      }
+      // Update di Supabase dengan upsert (insert or update)
+      await _supabase.from('habit_completions').upsert({
+        'habit_id': id,
+        'completed_date': dateKey,
+        'is_completed': newStatus,
+      }, onConflict: 'habit_id,completed_date');
+
+      print('Toggled in database');
 
       // Toggle di memory
       habit.toggleCompletionOnDate(date);
+      print('Toggled in memory');
     } catch (e) {
-      print('❌ Error toggling habit: $e');
+      print('Error toggling habit: $e');
       rethrow;
     }
   }
 
-  /// Load completion dates dari database
-  Future<void> loadCompletionDates(String habitId) async {
+  /// Reload completion dates dari database (untuk sync data)
+  Future<void> reloadAllCompletionDates() async {
     try {
-      print('📥 Loading completion dates for habit: $habitId');
-
-      final response = await _supabase
-          .from('habit_completions')
-          .select()
-          .eq('habit_id', habitId);
-
-      final habit = _habits.firstWhereIndexed((h) => h.id == habitId);
-      
-      if (habit != null) {
-        habit.completionDates.clear();
-        for (var item in response) {
-          habit.completionDates[item['completed_date']] = 
-              item['is_completed'] as bool;
-        }
-        print('✅ Loaded ${response.length} completion dates');
+      print('Reloading all completion dates...');
+      for (var habit in _habits) {
+        await _loadCompletionDatesForHabit(habit.id);
       }
+      print('All completion dates reloaded');
     } catch (e) {
-      print('⚠️ Error loading completion dates: $e');
+      print('Error reloading completion dates: $e');
     }
   }
 
@@ -253,15 +268,5 @@ class HabitService {
   int getCompletionPercentageForDate(DateTime date) {
     if (_habits.isEmpty) return 0;
     return ((getCompletedCountForDate(date) / getTotalCount()) * 100).toInt();
-  }
-}
-
-extension on Iterable<Habit> {
-  Habit? firstWhereIndexed(bool Function(Habit) test) {
-    try {
-      return firstWhere(test);
-    } catch (e) {
-      return null;
-    }
   }
 }

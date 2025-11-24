@@ -30,7 +30,7 @@ class _StatsScreenState extends State<StatsScreen> {
     DateTime currentDate = DateTime.now();
     
     while (true) {
-      final dateKey = '${currentDate.year}-${currentDate.month.toString().padLeft(2, '0')}-${currentDate.day.toString().padLeft(2, '0')}';
+      final dateKey = HabitService.formatDate(currentDate);
       final habits = _habitService.getAllHabits();
       
       bool hasCompletion = false;
@@ -55,7 +55,7 @@ class _StatsScreenState extends State<StatsScreen> {
     final habits = _habitService.getAllHabits();
     
     for (var habit in habits) {
-      total += habit.completionDates.length;
+      total += habit.completionDates.values.where((v) => v).length;
     }
     
     return total;
@@ -71,7 +71,7 @@ class _StatsScreenState extends State<StatsScreen> {
     
     for (int day = 1; day <= daysInMonth; day++) {
       final date = DateTime(_selectedMonth.year, _selectedMonth.month, day);
-      final dateKey = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+      final dateKey = HabitService.formatDate(date);
       
       for (var habit in habits) {
         if (habit.completionDates[dateKey] == true) {
@@ -99,7 +99,7 @@ class _StatsScreenState extends State<StatsScreen> {
         }
       }
       
-      double percentage = (completedDays / daysInMonth) * 100;
+      double percentage = daysInMonth > 0 ? (completedDays / daysInMonth) * 100 : 0;
       
       stats.add({
         'title': habit.title,
@@ -107,6 +107,8 @@ class _StatsScreenState extends State<StatsScreen> {
         'completed': completedDays,
         'total': daysInMonth,
         'percentage': percentage,
+        'streak': habit.getCurrentStreak(),
+        'longestStreak': habit.getLongestStreak(),
       });
     }
     
@@ -138,41 +140,61 @@ class _StatsScreenState extends State<StatsScreen> {
                 ),
               ),
               const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  IconButton(
-                    onPressed: _previousMonth,
-                    icon: Icon(
-                      Icons.chevron_left,
-                      color: isDark ? Colors.white : Colors.black,
+
+              // Month Navigation
+              Container(
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF2C2C2C) : Colors.cyan[50],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    IconButton(
+                      onPressed: _previousMonth,
+                      icon: Icon(
+                        Icons.chevron_left,
+                        color: isDark ? Colors.white : Colors.black,
+                      ),
                     ),
-                  ),
-                  Text(
-                    DateFormat('MMMM yyyy').format(_selectedMonth),
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: isDark ? Colors.white : Colors.black,
+                    Text(
+                      DateFormat('MMMM yyyy').format(_selectedMonth),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : Colors.black,
+                      ),
                     ),
-                  ),
-                  IconButton(
-                    onPressed: _nextMonth,
-                    icon: Icon(
-                      Icons.chevron_right,
-                      color: isDark ? Colors.white : Colors.black,
+                    IconButton(
+                      onPressed: _nextMonth,
+                      icon: Icon(
+                        Icons.chevron_right,
+                        color: isDark ? Colors.white : Colors.black,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
+
+              // Key Metrics
+              Text(
+                'Ringkasan Bulan Ini',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.cyan[400] : Colors.cyan[700],
+                ),
+              ),
+              const SizedBox(height: 12),
               Row(
                 children: [
                   Expanded(
                     child: _buildStatCard(
                       context,
                       icon: Icons.local_fire_department,
-                      title: 'Streak',
+                      title: 'Streak Saat Ini',
                       value: '$streak hari',
                       color: Colors.orange,
                     ),
@@ -189,25 +211,27 @@ class _StatsScreenState extends State<StatsScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               _buildStatCard(
                 context,
                 icon: Icons.trending_up,
-                title: 'Tingkat Penyelesaian ${DateFormat('MMMM').format(_selectedMonth)}',
+                title: 'Tingkat Penyelesaian',
                 value: '${(monthlyRate * 100).toStringAsFixed(1)}%',
                 color: Colors.cyan,
                 isFull: true,
               ),
               const SizedBox(height: 24),
+
+              // Habit Details
               Text(
                 'Detail Per Habit',
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: isDark ? Colors.white : Colors.black,
+                  color: isDark ? Colors.cyan[400] : Colors.cyan[700],
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               habits.isEmpty
                   ? Center(
                       child: Padding(
@@ -254,8 +278,8 @@ class _StatsScreenState extends State<StatsScreen> {
                                 Row(
                                   children: [
                                     Container(
-                                      width: 8,
-                                      height: 8,
+                                      width: 12,
+                                      height: 12,
                                       decoration: BoxDecoration(
                                         color: _getColorFromName(stat['color']),
                                         shape: BoxShape.circle,
@@ -267,7 +291,7 @@ class _StatsScreenState extends State<StatsScreen> {
                                         stat['title'],
                                         style: TextStyle(
                                           fontSize: 14,
-                                          fontWeight: FontWeight.w500,
+                                          fontWeight: FontWeight.w600,
                                           color: isDark ? Colors.white : Colors.black,
                                         ),
                                         maxLines: 2,
@@ -280,24 +304,72 @@ class _StatsScreenState extends State<StatsScreen> {
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Text(
-                                      '${stat['completed']}/${stat['total']} hari',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: isDark ? Colors.grey[400] : Colors.grey[600],
-                                      ),
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Completed',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: isDark ? Colors.grey[500] : Colors.grey[600],
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          '${stat['completed']}/${stat['total']}',
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                            color: isDark ? Colors.white : Colors.black,
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                    Text(
-                                      '${stat['percentage'].toStringAsFixed(1)}%',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                        color: _getColorFromName(stat['color']),
-                                      ),
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Current Streak',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: isDark ? Colors.grey[500] : Colors.grey[600],
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          '${stat['streak']} hari',
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.orange,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Best Streak',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: isDark ? Colors.grey[500] : Colors.grey[600],
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          '${stat['longestStreak']} hari',
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.green,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 ),
-                                const SizedBox(height: 8),
+                                const SizedBox(height: 12),
                                 ClipRRect(
                                   borderRadius: BorderRadius.circular(4),
                                   child: LinearProgressIndicator(
@@ -306,7 +378,16 @@ class _StatsScreenState extends State<StatsScreen> {
                                     valueColor: AlwaysStoppedAnimation<Color>(
                                       _getColorFromName(stat['color']),
                                     ),
-                                    minHeight: 6,
+                                    minHeight: 8,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  '${stat['percentage'].toStringAsFixed(1)}% Selesai',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: _getColorFromName(stat['color']),
                                   ),
                                 ),
                               ],
@@ -341,36 +422,42 @@ class _StatsScreenState extends State<StatsScreen> {
           color: isDark ? Colors.grey[800]! : Colors.grey[300]!,
         ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(8),
+              color: color.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
               icon,
               color: color,
-              size: 24,
+              size: 28,
             ),
           ),
-          const SizedBox(height: 12),
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 12,
-              color: isDark ? Colors.grey[400] : Colors.grey[600],
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white : Colors.black,
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark ? Colors.grey[400] : Colors.grey[600],
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : Colors.black,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
