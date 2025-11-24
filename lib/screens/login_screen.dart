@@ -24,12 +24,12 @@ class _LoginScreenState extends State<LoginScreen> {
     final username = _usernameController.text.trim();
     final password = _passwordController.text.trim();
 
-    print('🔐 LOGIN ATTEMPT');
+    print('LOGIN ATTEMPT');
     print('Username: $username');
     print('Password: $password');
 
     if (username.isEmpty || password.isEmpty) {
-      print('❌ Username atau password kosong');
+      print('Username atau password kosong');
       setState(() {
         _showError = true;
         _errorMessage = 'Username dan password harus diisi!';
@@ -48,12 +48,12 @@ class _LoginScreenState extends State<LoginScreen> {
       print('Login result: $success');
 
       if (success) {
-        print('✅ Login successful');
+        print('Login successful');
         
         // Initialize habits dari Supabase
-        print('📥 Initializing habits...');
+        print('Initializing habits...');
         await _habitService.initializeHabits();
-        print('✅ Habits initialized');
+        print('Habits initialized');
 
         if (mounted) {
           Navigator.pushReplacement(
@@ -62,7 +62,7 @@ class _LoginScreenState extends State<LoginScreen> {
           );
         }
       } else {
-        print('❌ Login failed - credentials invalid');
+        print('Login failed - credentials invalid');
         setState(() {
           _showError = true;
           _errorMessage = 'Username atau Password salah!';
@@ -70,7 +70,7 @@ class _LoginScreenState extends State<LoginScreen> {
         });
       }
     } catch (e) {
-      print('❌ Login error: $e');
+      print('Login error: $e');
       setState(() {
         _showError = true;
         _errorMessage = 'Error: $e';

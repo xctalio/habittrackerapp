@@ -38,27 +38,30 @@ class AuthService {
   }
 
   Future<bool> registerAsync(
-      String username, String password, String confirmPassword) async {
+    String username,
+    String password,
+    String confirmPassword,
+  ) async {
     try {
       print('=== REGISTER ASYNC START ===');
 
       if (username.isEmpty || password.isEmpty) {
-        print('❌ Username or password is empty');
+        print('Username or password is empty');
         return false;
       }
 
       if (password != confirmPassword) {
-        print('❌ Passwords do not match');
+        print('Passwords do not match');
         return false;
       }
 
       if (password.length < 6) {
-        print('❌ Password too short');
+        print('Password too short');
         return false;
       }
 
       // Cek apakah username sudah ada di tabel users
-      print('🔍 Checking if username already exists...');
+      print('Checking if username already exists...');
       try {
         final existingUsers = await _supabase
             .from('users')
@@ -68,15 +71,15 @@ class AuthService {
         print('Existing users result: $existingUsers');
 
         if (existingUsers.isNotEmpty) {
-          print('❌ Username already exists in database');
+          print('Username already exists in database');
           return false;
         }
-        print('✅ Username is available');
+        print('Username is available');
       } catch (checkError) {
-        print('⚠️ Error checking username: $checkError');
+        print('Error checking username: $checkError');
         if (checkError.toString().contains('column') ||
             checkError.toString().contains('relation')) {
-          print('❌ Database table error: $checkError');
+          print('Database table error: $checkError');
           return false;
         }
       }
@@ -85,7 +88,7 @@ class AuthService {
       final hashedPassword = _hashPassword(password);
 
       // Insert ke tabel users
-      print('💾 Inserting user to database...');
+      print('Inserting user to database...');
       final response = await _supabase.from('users').insert({
         'username': username,
         'password_hash': hashedPassword,
@@ -93,24 +96,20 @@ class AuthService {
       }).select();
 
       if (response.isNotEmpty) {
-        print('✅ User registered successfully');
+        print('User registered successfully');
         final userId = response[0]['id'].toString(); // Convert to String
-        _currentUser = User(
-          id: userId,
-          username: username,
-          password: password,
-        );
+        _currentUser = User(id: userId, username: username, password: password);
         _currentUsername = username;
         _currentUserId = userId;
-        print('✅ User ID: $userId');
+        print('User ID: $userId');
         print('=== REGISTER ASYNC SUCCESS ===');
         return true;
       }
 
-      print('❌ User registration returned empty');
+      print('User registration returned empty');
       return false;
     } catch (e) {
-      print('❌ Register async error: $e');
+      print('Register async error: $e');
       return false;
     }
   }
@@ -120,7 +119,7 @@ class AuthService {
       print('=== LOGIN ASYNC START ===');
 
       if (username.isEmpty || password.isEmpty) {
-        print('❌ Username or password is empty');
+        print('Username or password is empty');
         return false;
       }
 
@@ -128,14 +127,14 @@ class AuthService {
       final hashedPassword = _hashPassword(password);
 
       // Cari user di database
-      print('🔍 Searching for user: $username');
+      print('Searching for user: $username');
       final userData = await _supabase
           .from('users')
           .select('id, username, password_hash')
           .eq('username', username);
 
       if (userData.isEmpty) {
-        print('❌ User not found');
+        print('User not found');
         return false;
       }
 
@@ -144,11 +143,11 @@ class AuthService {
       final storedPasswordHash = user['password_hash'] as String;
 
       if (storedPasswordHash != hashedPassword) {
-        print('❌ Invalid password');
+        print('Invalid password');
         return false;
       }
 
-      print('✅ Login successful for user: ${user['username']}');
+      print('Login successful for user: ${user['username']}');
       final userId = user['id'].toString(); // Convert to String
       _currentUser = User(
         id: userId,
@@ -157,11 +156,11 @@ class AuthService {
       );
       _currentUsername = user['username'] as String;
       _currentUserId = userId;
-      print('✅ User ID: $userId');
+      print('User ID: $userId');
       print('=== LOGIN ASYNC SUCCESS ===');
       return true;
     } catch (e) {
-      print('❌ Login async error: $e');
+      print('Login async error: $e');
       return false;
     }
   }
@@ -182,9 +181,9 @@ class AuthService {
       _currentUser = null;
       _currentUsername = null;
       _currentUserId = null;
-      print('✅ Logout successful');
+      print('Logout successful');
     } catch (e) {
-      print('❌ Logout error: $e');
+      print('Logout error: $e');
     }
   }
 
@@ -206,9 +205,9 @@ class AuthService {
   Future<void> clearAuthData() async {
     try {
       await logoutAsync();
-      print('✅ Auth data cleared');
+      print('Auth data cleared');
     } catch (e) {
-      print('❌ Error clearing auth data: $e');
+      print('Error clearing auth data: $e');
     }
   }
 }
@@ -218,9 +217,5 @@ class User {
   final String username;
   final String password;
 
-  User({
-    this.id,
-    required this.username,
-    required this.password,
-  });
+  User({this.id, required this.username, required this.password});
 }

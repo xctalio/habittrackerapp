@@ -113,7 +113,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Halo, $username 👋',
+                        'Halo, $username!!!',
                         style: TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.bold,

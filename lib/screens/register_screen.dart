@@ -64,20 +64,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
       print('Register result: $success');
 
       if (success) {
-        print('✅ Register successful');
+        print('Register successful');
         
         // Login otomatis setelah register
-        print('📡 Auto-login...');
+        print('Auto-login...');
         final loginSuccess = await _authService.loginAsync(username, password);
         print('Auto-login result: $loginSuccess');
         
         if (loginSuccess) {
-          print('✅ Auto-login successful');
+          print('Auto-login successful');
           
           // Initialize habits
-          print('📥 Initializing habits...');
+          print('Initializing habits...');
           await _habitService.initializeHabits();
-          print('✅ Habits initialized');
+          print('Habits initialized');
 
           if (mounted) {
             Navigator.pushReplacement(
@@ -87,14 +87,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
           }
         }
       } else {
-        print('❌ Register failed');
+        print('Register failed');
         setState(() {
           _errorMessage = 'Username sudah digunakan atau error registrasi!';
           _isLoading = false;
         });
       }
     } catch (e) {
-      print('❌ Register error: $e');
+      print('Register error: $e');
       setState(() {
         _errorMessage = 'Error: $e';
         _isLoading = false;

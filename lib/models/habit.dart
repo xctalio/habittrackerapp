@@ -69,11 +69,12 @@ class Habit {
   int getLongestStreak() {
     if (completionDates.isEmpty) return 0;
 
-    final sortedDates = completionDates.entries
-        .where((e) => e.value)
-        .map((e) => DateTime.parse(e.key))
-        .toList()
-        ..sort();
+    final sortedDates =
+        completionDates.entries
+            .where((e) => e.value)
+            .map((e) => DateTime.parse(e.key))
+            .toList()
+          ..sort();
 
     if (sortedDates.isEmpty) return 0;
 
@@ -110,7 +111,6 @@ class Habit {
     );
   }
 
-  /// Convert to JSON (for storage/API)
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -121,14 +121,15 @@ class Habit {
     };
   }
 
-  /// Create from JSON (for storage/API)
   factory Habit.fromJson(Map<String, dynamic> json) {
     return Habit(
       id: json['id'] as String,
       title: json['title'] as String,
       createdAt: DateTime.parse(json['createdAt'] as String),
       color: json['color'] as String?,
-      completionDates: Map<String, bool>.from(json['completionDates'] as Map? ?? {}),
+      completionDates: Map<String, bool>.from(
+        json['completionDates'] as Map? ?? {},
+      ),
     );
   }
 
