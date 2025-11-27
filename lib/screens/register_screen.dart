@@ -30,7 +30,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     print('Confirm: $confirmPassword');
 
     if (username.isEmpty || password.isEmpty || confirmPassword.isEmpty) {
-      print('❌ Ada field yang kosong');
+      print('Ada field yang kosong');
       setState(() {
         _errorMessage = 'Semua field harus diisi!';
       });
@@ -38,7 +38,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
 
     if (password != confirmPassword) {
-      print('❌ Password tidak cocok');
+      print('Password tidak cocok');
       setState(() {
         _errorMessage = 'Password tidak cocok!';
       });
@@ -46,7 +46,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
 
     if (password.length < 6) {
-      print('❌ Password terlalu pendek');
+      print('Password terlalu pendek');
       setState(() {
         _errorMessage = 'Password minimal 6 karakter!';
       });
@@ -60,21 +60,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     try {
       print('📡 Calling registerAsync...');
-      final success = await _authService.registerAsync(username, password, confirmPassword);
+      final success = await _authService.registerAsync(
+        username,
+        password,
+        confirmPassword,
+      );
       print('Register result: $success');
 
       if (success) {
         print('Register successful');
-        
-        // Login otomatis setelah register
+
         print('Auto-login...');
         final loginSuccess = await _authService.loginAsync(username, password);
         print('Auto-login result: $loginSuccess');
-        
+
         if (loginSuccess) {
           print('Auto-login successful');
-          
-          // Initialize habits
+
           print('Initializing habits...');
           await _habitService.initializeHabits();
           print('Habits initialized');
@@ -82,7 +84,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
           if (mounted) {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => const MainNavigationScreen()),
+              MaterialPageRoute(
+                builder: (context) => const MainNavigationScreen(),
+              ),
             );
           }
         }
@@ -115,19 +119,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
               const SizedBox(height: 40),
               const Text(
                 'Selamat Datang',
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
               const Text(
                 'Silahkan registrasi untuk melanjutkan',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey,
-                ),
+                style: TextStyle(fontSize: 14, color: Colors.grey),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 40),
@@ -260,7 +258,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         height: 20,
                         width: 20,
                         child: CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
                           strokeWidth: 2,
                         ),
                       )

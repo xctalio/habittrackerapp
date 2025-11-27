@@ -14,7 +14,6 @@ class JournalService {
 
   bool get isInitialized => _isInitialized;
 
-  /// Initialize journal entries dari database
   Future<void> initializeJournal() async {
     if (_isInitialized) return;
 
@@ -29,7 +28,6 @@ class JournalService {
 
       print('Loading journal entries for user: $userId');
 
-      // Load entries dari Supabase, sorted by newest first
       final response = await _supabase
           .from('journal_entries')
           .select()
@@ -63,7 +61,6 @@ class JournalService {
 
   List<JournalEntry> getAllEntries() => _entries;
 
-  /// Add entry ke database dan memory
   Future<void> addEntry(JournalEntry entry) async {
     try {
       final userId = _authService.getCurrentUserId();
@@ -74,7 +71,6 @@ class JournalService {
 
       print('Saving journal entry to database: ${entry.id}');
 
-      // Insert ke Supabase
       await _supabase.from('journal_entries').insert({
         'id': entry.id,
         'user_id': userId,
@@ -84,7 +80,6 @@ class JournalService {
         'created_at': entry.createdAt.toIso8601String(),
       });
 
-      // Add ke memory (di awal karena newest first)
       _entries.insert(0, entry);
       print('Entry saved successfully');
     } catch (e) {
@@ -93,7 +88,6 @@ class JournalService {
     }
   }
 
-  /// Update entry di database dan memory
   Future<void> updateEntry(String id, JournalEntry updatedEntry) async {
     try {
       final index = _entries.indexWhere((e) => e.id == id);
@@ -104,7 +98,6 @@ class JournalService {
 
       print('Updating journal entry: $id');
 
-      // Update di Supabase
       await _supabase
           .from('journal_entries')
           .update({
@@ -115,7 +108,6 @@ class JournalService {
           })
           .eq('id', id);
 
-      // Update di memory
       _entries[index] = JournalEntry(
         id: updatedEntry.id,
         content: updatedEntry.content,
@@ -123,7 +115,6 @@ class JournalService {
         dateEntry: updatedEntry.dateEntry,
       );
 
-      // Sort ulang untuk newest first
       _entries.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
       print('Entry updated successfully');
@@ -133,15 +124,12 @@ class JournalService {
     }
   }
 
-  /// Delete entry dari database dan memory
   Future<void> deleteEntry(String id) async {
     try {
       print('Deleting journal entry: $id');
 
-      // Delete dari Supabase
       await _supabase.from('journal_entries').delete().eq('id', id);
 
-      // Delete dari memory
       _entries.removeWhere((e) => e.id == id);
       print('Entry deleted successfully');
     } catch (e) {
@@ -150,7 +138,6 @@ class JournalService {
     }
   }
 
-  /// Search entries
   List<JournalEntry> searchEntries(String query) {
     if (query.isEmpty) {
       return _entries;
@@ -160,7 +147,6 @@ class JournalService {
         .toList();
   }
 
-  /// Reset initialization state
   void resetInitialization() {
     _isInitialized = false;
     _entries.clear();

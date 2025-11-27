@@ -7,7 +7,6 @@ import 'services/theme_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Debug prints
   print('═══════════════════════════════════════');
   print('   STARTING SUPABASE INITIALIZATION');
   print('═══════════════════════════════════════');

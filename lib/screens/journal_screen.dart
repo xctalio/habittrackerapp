@@ -313,7 +313,6 @@ class _JournalScreenState extends State<JournalScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Header
             Padding(
               padding: const EdgeInsets.all(24.0),
               child: Column(
@@ -336,7 +335,6 @@ class _JournalScreenState extends State<JournalScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  // Search Bar
                   TextField(
                     onChanged: (value) {
                       setState(() {
@@ -380,7 +378,6 @@ class _JournalScreenState extends State<JournalScreen> {
                 ],
               ),
             ),
-            // Entries List
             Expanded(
               child: _isLoading
                   ? Center(

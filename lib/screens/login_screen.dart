@@ -50,7 +50,6 @@ class _LoginScreenState extends State<LoginScreen> {
       if (success) {
         print('Login successful');
         
-        // Initialize habits dari Supabase
         print('Initializing habits...');
         await _habitService.initializeHabits();
         print('Habits initialized');

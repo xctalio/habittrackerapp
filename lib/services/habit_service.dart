@@ -16,7 +16,6 @@ class HabitService {
     return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
   }
 
-  /// Initialize habits dari database + load completion dates
   Future<void> initializeHabits() async {
     if (_isInitialized) return;
 
@@ -31,11 +30,10 @@ class HabitService {
 
       print('Loading habits for user: $userId');
 
-      // Load habits dari Supabase
       final habitsResponse = await _supabase
           .from('habits')
           .select()
-          .eq('user_id', userId);
+          .eq('user_id', userId.toString());
 
       print('Habits Response: $habitsResponse');
 
@@ -43,28 +41,36 @@ class HabitService {
 
       for (var habitData in habitsResponse) {
         final habitId = habitData['id'] as String;
+
+        final recurrenceDays = <int>[];
+        if (habitData['recurrence_days'] != null) {
+          final days = habitData['recurrence_days'] as List;
+          recurrenceDays.addAll(days.map((d) => d as int));
+        }
+
         final habit = Habit(
           id: habitId,
           title: habitData['title'] as String,
           createdAt: DateTime.parse(habitData['created_at'] as String),
           color: habitData['color'] as String?,
+          recurrenceType: habitData['recurrence_type'] as String? ?? 'daily',
+          recurrenceDays: recurrenceDays,
+          recurrenceDate: habitData['recurrence_date'] as int?,
         );
         _habits.add(habit);
-        print('Loaded habit: ${habit.title}');
+        print('Loaded habit: ${habit.title} (${habit.recurrenceType})');
 
-        // Load completion dates untuk habit ini
         await _loadCompletionDatesForHabit(habitId);
       }
 
       _isInitialized = true;
-      print('Habits initialized successfully (${_habits.length} habits)');
+      print('Habits initialized successfully (${_habits.length} habits total)');
     } catch (e) {
       print('Error initializing habits: $e');
       rethrow;
     }
   }
 
-  /// Load completion dates untuk satu habit
   Future<void> _loadCompletionDatesForHabit(String habitId) async {
     try {
       print('Loading completion dates for habit: $habitId');
@@ -93,10 +99,8 @@ class HabitService {
     }
   }
 
-  /// Check if habits are initialized
   bool get isInitialized => _isInitialized;
 
-  /// Reset initialization state
   void resetInitialization() {
     _isInitialized = false;
     _habits.clear();
@@ -104,7 +108,6 @@ class HabitService {
 
   List<Habit> getAllHabits() => _habits;
 
-  /// Add habit ke database dan memory
   Future<void> addHabit(Habit habit) async {
     try {
       final userId = _authService.getCurrentUserId();
@@ -113,32 +116,33 @@ class HabitService {
         throw Exception('User not logged in');
       }
 
-      // Check duplicate
       if (_habits.any((h) => h.id == habit.id)) {
         throw Exception('Habit with id ${habit.id} already exists');
       }
 
       print('Saving habit to database: ${habit.title}');
 
-      // Insert ke Supabase
       await _supabase.from('habits').insert({
         'id': habit.id,
-        'user_id': userId,
+        'user_id': userId.toString(),
         'title': habit.title,
         'color': habit.color,
         'created_at': habit.createdAt.toIso8601String(),
+        'recurrence_type': habit.recurrenceType,
+        'recurrence_days': habit.recurrenceDays.isEmpty
+            ? null
+            : habit.recurrenceDays,
+        'recurrence_date': habit.recurrenceDate,
       });
 
-      // Add ke memory
       _habits.add(habit);
-      print('Habit saved successfully');
+      print('Habit saved successfully (1 habit created)');
     } catch (e) {
       print('Error adding habit: $e');
       rethrow;
     }
   }
 
-  /// Update habit di database dan memory
   Future<void> updateHabit(String id, Habit updatedHabit) async {
     try {
       final index = _habits.indexWhere((h) => h.id == id);
@@ -149,17 +153,20 @@ class HabitService {
 
       print('Updating habit: $id');
 
-      // Update di Supabase
       await _supabase
           .from('habits')
           .update({
             'title': updatedHabit.title,
             'color': updatedHabit.color,
+            'recurrence_type': updatedHabit.recurrenceType,
+            'recurrence_days': updatedHabit.recurrenceDays.isEmpty
+                ? null
+                : updatedHabit.recurrenceDays,
+            'recurrence_date': updatedHabit.recurrenceDate,
             'updated_at': DateTime.now().toIso8601String(),
           })
           .eq('id', id);
 
-      // Update di memory
       _habits[index] = updatedHabit;
       print('Habit updated successfully');
     } catch (e) {
@@ -168,15 +175,12 @@ class HabitService {
     }
   }
 
-  /// Delete habit dari database dan memory
   Future<void> deleteHabit(String id) async {
     try {
       print('Deleting habit: $id');
 
-      // Delete dari Supabase (akan cascade delete habit_completions)
       await _supabase.from('habits').delete().eq('id', id);
 
-      // Delete dari memory
       _habits.removeWhere((h) => h.id == id);
       print('Habit deleted successfully');
     } catch (e) {
@@ -185,17 +189,23 @@ class HabitService {
     }
   }
 
-  /// Toggle completion dan save ke database
   Future<void> toggleHabit(String id, DateTime date) async {
     try {
       final habit = _habits.firstWhere((h) => h.id == id);
+
+      if (!habit.isActiveOnDate(date)) {
+        print(
+          'Habit tidak active di tanggal ini (recurrence: ${habit.recurrenceType})',
+        );
+        throw Exception('Habit tidak tersedia di tanggal ini');
+      }
+
       final dateKey = formatDate(date);
       final currentStatus = habit.isCompletedOnDate(date);
       final newStatus = !currentStatus;
 
-      print('Toggling habit $id on $dateKey: $currentStatus -> $newStatus');
+      print('Toggling habit $id on $dateKey: $currentStatus → $newStatus');
 
-      // Update di Supabase dengan upsert (insert or update)
       await _supabase.from('habit_completions').upsert({
         'habit_id': id,
         'completed_date': dateKey,
@@ -204,7 +214,6 @@ class HabitService {
 
       print('Toggled in database');
 
-      // Toggle di memory
       habit.toggleCompletionOnDate(date);
       print('Toggled in memory');
     } catch (e) {
@@ -213,7 +222,6 @@ class HabitService {
     }
   }
 
-  /// Reload completion dates dari database (untuk sync data)
   Future<void> reloadAllCompletionDates() async {
     try {
       print('Reloading all completion dates...');
@@ -226,8 +234,14 @@ class HabitService {
     }
   }
 
+  List<Habit> getActiveHabitsForDate(DateTime date) {
+    return _habits.where((h) => h.isActiveOnDate(date)).toList();
+  }
+
   int getCompletedCountForDate(DateTime date) {
-    return _habits.where((h) => h.isCompletedOnDate(date)).length;
+    return getActiveHabitsForDate(
+      date,
+    ).where((h) => h.isCompletedOnDate(date)).length;
   }
 
   int getTotalCount() {
@@ -235,20 +249,26 @@ class HabitService {
   }
 
   double getProgressForDate(DateTime date) {
-    if (_habits.isEmpty) return 0.0;
-    return getCompletedCountForDate(date) / getTotalCount();
+    final active = getActiveHabitsForDate(date);
+    if (active.isEmpty) return 0.0;
+    final completed = active.where((h) => h.isCompletedOnDate(date)).length;
+    return completed / active.length;
   }
 
   bool hasCompletionOnDate(DateTime date) {
-    return _habits.any((h) => h.isCompletedOnDate(date));
+    return getActiveHabitsForDate(date).any((h) => h.isCompletedOnDate(date));
   }
 
   List<Habit> getCompletedHabitsForDate(DateTime date) {
-    return _habits.where((h) => h.isCompletedOnDate(date)).toList();
+    return getActiveHabitsForDate(
+      date,
+    ).where((h) => h.isCompletedOnDate(date)).toList();
   }
 
   List<Habit> getIncompletedHabitsForDate(DateTime date) {
-    return _habits.where((h) => !h.isCompletedOnDate(date)).toList();
+    return getActiveHabitsForDate(
+      date,
+    ).where((h) => !h.isCompletedOnDate(date)).toList();
   }
 
   Habit? getHabitById(String id) {
@@ -266,7 +286,9 @@ class HabitService {
   }
 
   int getCompletionPercentageForDate(DateTime date) {
-    if (_habits.isEmpty) return 0;
-    return ((getCompletedCountForDate(date) / getTotalCount()) * 100).toInt();
+    final active = getActiveHabitsForDate(date);
+    if (active.isEmpty) return 0;
+    final completed = active.where((h) => h.isCompletedOnDate(date)).length;
+    return ((completed / active.length) * 100).toInt();
   }
 }

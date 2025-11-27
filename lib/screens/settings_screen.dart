@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart'; // ← TAMBAH INI
 import 'login_screen.dart';
 import '../services/auth_service.dart';
 import '../services/theme_service.dart';
@@ -49,9 +50,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         radius: 24,
                         backgroundColor: Colors.cyan[400],
                         child: Text(
-                          username.isNotEmpty
-                              ? username[0].toUpperCase()
-                              : 'U',
+                          username.isNotEmpty ? username[0].toUpperCase() : 'U',
                           style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
@@ -69,8 +68,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
-                                color:
-                                    isDark ? Colors.white : Colors.black,
+                                color: isDark ? Colors.white : Colors.black,
                               ),
                             ),
                             const SizedBox(height: 4),
@@ -104,17 +102,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Close',
-              style: TextStyle(color: Colors.cyan[400]),
-            ),
+            child: Text('Close', style: TextStyle(color: Colors.cyan[400])),
           ),
         ],
       ),
     );
   }
 
-  void _showClearCacheDialog() {
+  void _showResetDataDialog() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     showDialog(
@@ -122,11 +117,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
       builder: (context) => AlertDialog(
         backgroundColor: isDark ? const Color(0xFF2C2C2C) : Colors.white,
         title: Text(
-          'Clear Cache',
+          'Reset Semua Data',
           style: TextStyle(color: isDark ? Colors.white : Colors.black),
         ),
         content: Text(
-          'Hapus semua data lokal? Data di server akan tetap aman.',
+          'PERINGATAN: Tindakan ini akan menghapus SEMUA habits dan journal entries Anda.\n\nData akan hilang permanen dan tidak dapat dipulihkan. Lanjutkan?',
           style: TextStyle(color: isDark ? Colors.white70 : Colors.black87),
         ),
         actions: [
@@ -138,15 +133,48 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
           TextButton(
-            onPressed: () {
-              _habitService.resetInitialization();
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Cache berhasil dihapus')),
-              );
+            onPressed: () async {
+              try {
+                final userId = _authService.getCurrentUserId();
+                if (userId != null) {
+                  await Supabase.instance.client
+                      .from('habits')
+                      .delete()
+                      .eq('user_id', userId.toString());
+
+                  await Supabase.instance.client
+                      .from('journal_entries')
+                      .delete()
+                      .eq('user_id', userId.toString());
+
+                  _habitService.resetInitialization();
+                }
+
+                if (mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Semua data berhasil dihapus'),
+                      backgroundColor: Colors.red,
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                  setState(() {});
+                }
+              } catch (e) {
+                if (mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
             },
             child: Text(
-              'Hapus',
+              'Hapus Semua',
               style: TextStyle(color: Colors.red[400]),
             ),
           ),
@@ -195,16 +223,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
               } catch (e) {
                 if (mounted) {
                   Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error: $e')),
-                  );
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text('Error: $e')));
                 }
               }
             },
-            child: Text(
-              'Logout',
-              style: TextStyle(color: Colors.red[400]),
-            ),
+            child: Text('Logout', style: TextStyle(color: Colors.red[400])),
           ),
         ],
       ),
@@ -221,7 +246,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            // Header Profile
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -260,9 +284,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           'Manage your account',
                           style: TextStyle(
                             fontSize: 14,
-                            color: isDark
-                                ? Colors.grey[400]
-                                : Colors.grey[600],
+                            color: isDark ? Colors.grey[400] : Colors.grey[600],
                           ),
                         ),
                       ],
@@ -273,7 +295,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             const SizedBox(height: 24),
 
-            // ACCOUNT SECTION
             _buildSectionTitle('Account'),
             _buildListTile(
               context,
@@ -284,7 +305,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Divider(color: Theme.of(context).dividerColor),
             const SizedBox(height: 12),
 
-            // PREFERENCES SECTION
             _buildSectionTitle('Preferences'),
             ListTile(
               leading: Icon(
@@ -293,9 +313,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               title: Text(
                 'Dark Mode',
-                style: TextStyle(
-                  color: isDark ? Colors.white : Colors.black,
-                ),
+                style: TextStyle(color: isDark ? Colors.white : Colors.black),
               ),
               trailing: Switch(
                 value: _themeService.isDarkMode,
@@ -315,9 +333,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               title: Text(
                 'Notifications',
-                style: TextStyle(
-                  color: isDark ? Colors.white : Colors.black,
-                ),
+                style: TextStyle(color: isDark ? Colors.white : Colors.black),
               ),
               trailing: Switch(
                 value: _notificationsEnabled,
@@ -332,19 +348,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Divider(color: Theme.of(context).dividerColor),
             const SizedBox(height: 12),
 
-            // DATA SECTION
             _buildSectionTitle('Data & Privacy'),
             _buildListTile(
               context,
-              icon: Icons.delete_sweep_outlined,
-              title: 'Clear Cache',
-              subtitle: 'Remove local data',
-              onTap: _showClearCacheDialog,
+              icon: Icons.delete_outline,
+              title: 'Reset Semua Data',
+              subtitle: 'Hapus semua habits dan journal',
+              onTap: _showResetDataDialog,
+              isDestructive: true,
             ),
             Divider(color: Theme.of(context).dividerColor),
             const SizedBox(height: 12),
 
-            // HELP SECTION
             _buildSectionTitle('Help & Support'),
             _buildListTile(
               context,
@@ -354,8 +369,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 showDialog(
                   context: context,
                   builder: (context) => AlertDialog(
-                    backgroundColor:
-                        isDark ? const Color(0xFF2C2C2C) : Colors.white,
+                    backgroundColor: isDark
+                        ? const Color(0xFF2C2C2C)
+                        : Colors.white,
                     title: Text(
                       'Help & Support',
                       style: TextStyle(
@@ -390,8 +406,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 showDialog(
                   context: context,
                   builder: (context) => AlertDialog(
-                    backgroundColor:
-                        isDark ? const Color(0xFF2C2C2C) : Colors.white,
+                    backgroundColor: isDark
+                        ? const Color(0xFF2C2C2C)
+                        : Colors.white,
                     title: Text(
                       'About Habit Tracker',
                       style: TextStyle(
@@ -420,13 +437,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Divider(color: Theme.of(context).dividerColor),
             const SizedBox(height: 24),
 
-            // LOGOUT BUTTON
             ListTile(
               leading: Icon(Icons.logout, color: Colors.red[400]),
-              title: Text(
-                'Logout',
-                style: TextStyle(color: Colors.red[400]),
-              ),
+              title: Text('Logout', style: TextStyle(color: Colors.red[400])),
               onTap: _showLogoutDialog,
             ),
             const SizedBox(height: 32),
@@ -459,18 +472,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required String title,
     String? subtitle,
     required VoidCallback onTap,
+    bool isDestructive = false,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return ListTile(
       leading: Icon(
         icon,
-        color: isDark ? Colors.white : Colors.black,
+        color: isDestructive
+            ? Colors.red[400]
+            : (isDark ? Colors.white : Colors.black),
       ),
       title: Text(
         title,
         style: TextStyle(
-          color: isDark ? Colors.white : Colors.black,
+          color: isDestructive
+              ? Colors.red[400]
+              : (isDark ? Colors.white : Colors.black),
         ),
       ),
       subtitle: subtitle != null

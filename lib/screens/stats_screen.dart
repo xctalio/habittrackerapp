@@ -28,90 +28,116 @@ class _StatsScreenState extends State<StatsScreen> {
   int _getStreak() {
     int streak = 0;
     DateTime currentDate = DateTime.now();
-    
+
     while (true) {
       final dateKey = HabitService.formatDate(currentDate);
       final habits = _habitService.getAllHabits();
-      
+
       bool hasCompletion = false;
       for (var habit in habits) {
-        if (habit.completionDates[dateKey] == true) {
+        if (habit.isActiveOnDate(currentDate) &&
+            habit.completionDates[dateKey] == true) {
           hasCompletion = true;
           break;
         }
       }
-      
+
       if (!hasCompletion) break;
-      
+
       streak++;
       currentDate = currentDate.subtract(const Duration(days: 1));
     }
-    
+
     return streak;
   }
 
   int _getTotalCompletions() {
     int total = 0;
     final habits = _habitService.getAllHabits();
-    
+
     for (var habit in habits) {
-      total += habit.completionDates.values.where((v) => v).length;
+      for (var entry in habit.completionDates.entries) {
+        if (entry.value) {
+          final date = DateTime.parse(entry.key);
+          if (habit.isActiveOnDate(date)) {
+            total++;
+          }
+        }
+      }
     }
-    
+
     return total;
   }
 
   double _getMonthlyCompletionRate() {
     final habits = _habitService.getAllHabits();
     if (habits.isEmpty) return 0.0;
-    
+
     int daysInMonth = DateTime(_selectedMonth.year, _selectedMonth.month + 1, 0).day;
-    int totalPossible = habits.length * daysInMonth;
+    int totalPossible = 0;
     int totalCompleted = 0;
-    
+
+    for (int day = 1; day <= daysInMonth; day++) {
+      final date = DateTime(_selectedMonth.year, _selectedMonth.month, day);
+      for (var habit in habits) {
+        if (habit.isActiveOnDate(date)) {
+          totalPossible++;
+        }
+      }
+    }
+
     for (int day = 1; day <= daysInMonth; day++) {
       final date = DateTime(_selectedMonth.year, _selectedMonth.month, day);
       final dateKey = HabitService.formatDate(date);
-      
+
       for (var habit in habits) {
-        if (habit.completionDates[dateKey] == true) {
+        if (habit.isActiveOnDate(date) &&
+            habit.completionDates[dateKey] == true) {
           totalCompleted++;
         }
       }
     }
-    
+
     return totalPossible > 0 ? totalCompleted / totalPossible : 0.0;
   }
 
   List<Map<String, dynamic>> _getHabitStats() {
     final habits = _habitService.getAllHabits();
     final List<Map<String, dynamic>> stats = [];
-    
+
     int daysInMonth = DateTime(_selectedMonth.year, _selectedMonth.month + 1, 0).day;
-    
+
     for (var habit in habits) {
       int completedDays = 0;
-      
+      int activeDays = 0;
+
       for (int day = 1; day <= daysInMonth; day++) {
         final date = DateTime(_selectedMonth.year, _selectedMonth.month, day);
-        if (habit.isCompletedOnDate(date)) {
-          completedDays++;
+
+        if (habit.isActiveOnDate(date)) {
+          activeDays++;
+          if (habit.isCompletedOnDate(date)) {
+            completedDays++;
+          }
         }
       }
-      
-      double percentage = daysInMonth > 0 ? (completedDays / daysInMonth) * 100 : 0;
-      
+
+      double percentage = activeDays > 0 ? (completedDays / activeDays) * 100 : 0;
+
       stats.add({
         'title': habit.title,
         'color': habit.color,
+        'recurrenceType': habit.recurrenceType,
+        'recurrenceDays': habit.recurrenceDays,
+        'recurrenceDate': habit.recurrenceDate,
         'completed': completedDays,
-        'total': daysInMonth,
+        'total': activeDays,
         'percentage': percentage,
         'streak': habit.getCurrentStreak(),
         'longestStreak': habit.getLongestStreak(),
       });
     }
-    
+
     return stats;
   }
 
@@ -141,7 +167,6 @@ class _StatsScreenState extends State<StatsScreen> {
               ),
               const SizedBox(height: 24),
 
-              // Month Navigation
               Container(
                 decoration: BoxDecoration(
                   color: isDark ? const Color(0xFF2C2C2C) : Colors.cyan[50],
@@ -178,7 +203,6 @@ class _StatsScreenState extends State<StatsScreen> {
               ),
               const SizedBox(height: 24),
 
-              // Key Metrics
               Text(
                 'Ringkasan Bulan Ini',
                 style: TextStyle(
@@ -222,7 +246,6 @@ class _StatsScreenState extends State<StatsScreen> {
               ),
               const SizedBox(height: 24),
 
-              // Habit Details
               Text(
                 'Detail Per Habit',
                 style: TextStyle(
@@ -287,31 +310,53 @@ class _StatsScreenState extends State<StatsScreen> {
                                     ),
                                     const SizedBox(width: 12),
                                     Expanded(
-                                      child: Text(
-                                        stat['title'],
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w600,
-                                          color: isDark ? Colors.white : Colors.black,
-                                        ),
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            stat['title'],
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w600,
+                                              color: isDark
+                                                  ? Colors.white
+                                                  : Colors.black,
+                                            ),
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            _getRecurrenceLabel(stat),
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              color: isDark
+                                                  ? Colors.grey[500]
+                                                  : Colors.grey[600],
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
                                   ],
                                 ),
                                 const SizedBox(height: 12),
                                 Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
                                     Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           'Completed',
                                           style: TextStyle(
                                             fontSize: 11,
-                                            color: isDark ? Colors.grey[500] : Colors.grey[600],
+                                            color: isDark
+                                                ? Colors.grey[500]
+                                                : Colors.grey[600],
                                           ),
                                         ),
                                         const SizedBox(height: 4),
@@ -320,19 +365,24 @@ class _StatsScreenState extends State<StatsScreen> {
                                           style: TextStyle(
                                             fontSize: 16,
                                             fontWeight: FontWeight.bold,
-                                            color: isDark ? Colors.white : Colors.black,
+                                            color: isDark
+                                                ? Colors.white
+                                                : Colors.black,
                                           ),
                                         ),
                                       ],
                                     ),
                                     Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           'Current Streak',
                                           style: TextStyle(
                                             fontSize: 11,
-                                            color: isDark ? Colors.grey[500] : Colors.grey[600],
+                                            color: isDark
+                                                ? Colors.grey[500]
+                                                : Colors.grey[600],
                                           ),
                                         ),
                                         const SizedBox(height: 4),
@@ -347,13 +397,16 @@ class _StatsScreenState extends State<StatsScreen> {
                                       ],
                                     ),
                                     Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           'Best Streak',
                                           style: TextStyle(
                                             fontSize: 11,
-                                            color: isDark ? Colors.grey[500] : Colors.grey[600],
+                                            color: isDark
+                                                ? Colors.grey[500]
+                                                : Colors.grey[600],
                                           ),
                                         ),
                                         const SizedBox(height: 4),
@@ -374,7 +427,9 @@ class _StatsScreenState extends State<StatsScreen> {
                                   borderRadius: BorderRadius.circular(4),
                                   child: LinearProgressIndicator(
                                     value: stat['percentage'] / 100,
-                                    backgroundColor: isDark ? Colors.grey[800] : Colors.grey[200],
+                                    backgroundColor: isDark
+                                        ? Colors.grey[800]
+                                        : Colors.grey[200],
                                     valueColor: AlwaysStoppedAnimation<Color>(
                                       _getColorFromName(stat['color']),
                                     ),
@@ -477,6 +532,23 @@ class _StatsScreenState extends State<StatsScreen> {
         return Colors.pink;
       default:
         return Colors.cyan;
+    }
+  }
+
+  String _getRecurrenceLabel(Map<String, dynamic> stat) {
+    switch (stat['recurrenceType']) {
+      case 'daily':
+        return 'Setiap hari';
+      case 'weekly':
+        final dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        final days = stat['recurrenceDays']
+            .map((d) => dayNames[d])
+            .join(', ');
+        return 'Weekly: $days';
+      case 'monthly':
+        return 'Monthly: Day ${stat['recurrenceDate']}';
+      default:
+        return 'Daily';
     }
   }
 }

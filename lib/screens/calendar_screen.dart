@@ -71,10 +71,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final habits = _habitService.getAllHabits();
+    final activeHabits = _habitService.getActiveHabitsForDate(_selectedDate);
     final days = _getDaysInMonth(_currentMonth);
     final completedCount = _habitService.getCompletedCountForDate(_selectedDate);
-    final totalCount = _habitService.getTotalCount();
+    final activeCount = activeHabits.length;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
@@ -126,7 +126,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
               const SizedBox(height: 20),
               Container(
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF2C2C2C) : Colors.black,
+                  color: isDark 
+                      ? const Color(0xFF1F1F2E) 
+                      : Colors.grey[100],
                   borderRadius: BorderRadius.circular(12),
                 ),
                 padding: const EdgeInsets.all(16),
@@ -140,8 +142,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                 child: Text(
                                   day,
                                   textAlign: TextAlign.center,
-                                  style: const TextStyle(
-                                    color: Colors.white,
+                                  style: TextStyle(
+                                    color: isDark 
+                                        ? Colors.grey[400]
+                                        : Colors.grey[600],
                                     fontSize: 12,
                                     fontWeight: FontWeight.w500,
                                   ),
@@ -164,10 +168,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
                         final isToday = _isSameDay(date, DateTime.now());
                         final isSelected = _isSameDay(date, _selectedDate);
                         final isCurrentMonth = date.month == _currentMonth.month;
+                        
+                        final habitsForDate =
+                            _habitService.getActiveHabitsForDate(date);
                         final hasCompletion =
-                            _habitService.hasCompletionOnDate(date);
-                        final completionCount =
-                            _habitService.getCompletedCountForDate(date);
+                            habitsForDate.any((h) => h.isCompletedOnDate(date));
+                        final completionCount = habitsForDate
+                            .where((h) => h.isCompletedOnDate(date))
+                            .length;
 
                         return GestureDetector(
                           onTap: () {
@@ -180,13 +188,17 @@ class _CalendarScreenState extends State<CalendarScreen> {
                               color: isToday
                                   ? Colors.cyan[400]
                                   : isSelected
-                                      ? Colors.cyan[700]
-                                      : Colors.transparent,
+                                      ? Colors.cyan[300]
+                                      : (isDark 
+                                          ? Colors.transparent
+                                          : Colors.white),
                               shape: BoxShape.circle,
-                              border: isSelected && !isToday
-                                  ? Border.all(
-                                      color: Colors.cyan[400]!, width: 2)
-                                  : null,
+                              border: Border.all(
+                                color: isSelected && !isToday
+                                    ? Colors.cyan[300]!
+                                    : Colors.transparent,
+                                width: 2,
+                              ),
                             ),
                             child: Stack(
                               alignment: Alignment.center,
@@ -194,9 +206,17 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                 Text(
                                   '${date.day}',
                                   style: TextStyle(
-                                    color: isCurrentMonth
+                                    color: isToday
                                         ? Colors.white
-                                        : Colors.white.withOpacity(0.3),
+                                        : isSelected
+                                            ? Colors.white
+                                            : (isCurrentMonth
+                                                ? (isDark
+                                                    ? Colors.white
+                                                    : Colors.black)
+                                                : (isDark
+                                                    ? Colors.grey[600]
+                                                    : Colors.grey[400])),
                                     fontSize: 14,
                                     fontWeight: isToday || isSelected
                                         ? FontWeight.bold
@@ -252,7 +272,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
-                      '$completedCount/$totalCount',
+                      '$completedCount/$activeCount',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
@@ -263,7 +283,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 ],
               ),
               const SizedBox(height: 16),
-              habits.isEmpty
+              activeHabits.isEmpty
                   ? Center(
                       child: Padding(
                         padding: const EdgeInsets.all(32.0),
@@ -278,7 +298,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                             ),
                             const SizedBox(height: 16),
                             Text(
-                              'Tidak ada habit',
+                              'Tidak ada habit di hari ini',
                               style: TextStyle(
                                 fontSize: 16,
                                 color: isDark
@@ -293,9 +313,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   : ListView.builder(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
-                      itemCount: habits.length,
+                      itemCount: activeHabits.length,
                       itemBuilder: (context, index) {
-                        final habit = habits[index];
+                        final habit = activeHabits[index];
                         final isCompleted =
                             habit.isCompletedOnDate(_selectedDate);
 
@@ -380,24 +400,43 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                   ),
                                   const SizedBox(width: 12),
                                   Expanded(
-                                    child: Text(
-                                      habit.title,
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        height: 1.4,
-                                        decoration: isCompleted
-                                            ? TextDecoration.lineThrough
-                                            : TextDecoration.none,
-                                        color: isCompleted
-                                            ? (isDark
-                                                ? Colors.grey[600]
-                                                : Colors.grey)
-                                            : (isDark
-                                                ? Colors.white
-                                                : Colors.black),
-                                      ),
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          habit.title,
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            height: 1.4,
+                                            decoration: isCompleted
+                                                ? TextDecoration.lineThrough
+                                                : TextDecoration.none,
+                                            color: isCompleted
+                                                ? (isDark
+                                                    ? Colors.grey[600]
+                                                    : Colors.grey)
+                                                : (isDark
+                                                    ? Colors.white
+                                                    : Colors.black),
+                                          ),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        if (habit.recurrenceType != 'daily')
+                                          Padding(
+                                            padding:
+                                                const EdgeInsets.only(top: 4),
+                                            child: Text(
+                                              _getRecurrenceLabel(habit),
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                color: isDark
+                                                    ? Colors.grey[500]
+                                                    : Colors.grey[500],
+                                              ),
+                                            ),
+                                          ),
+                                      ],
                                     ),
                                   ),
                                 ],
@@ -412,5 +451,20 @@ class _CalendarScreenState extends State<CalendarScreen> {
         ),
       ),
     );
+  }
+
+  String _getRecurrenceLabel(var habit) {
+    switch (habit.recurrenceType) {
+      case 'weekly':
+        final dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        final days = habit.recurrenceDays
+            .map((d) => dayNames[d])
+            .join(', ');
+        return 'Weekly: $days';
+      case 'monthly':
+        return 'Monthly: Day ${habit.recurrenceDate}';
+      default:
+        return 'Daily';
+    }
   }
 }

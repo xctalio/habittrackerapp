@@ -16,7 +16,6 @@ class AuthService {
   String? get currentUsername => _currentUsername;
   String? get currentUserId => _currentUserId;
 
-  /// Hash password untuk keamanan
   static String _hashPassword(String password) {
     return sha256.convert(utf8.encode(password)).toString();
   }
@@ -60,7 +59,6 @@ class AuthService {
         return false;
       }
 
-      // Cek apakah username sudah ada di tabel users
       print('Checking if username already exists...');
       try {
         final existingUsers = await _supabase
@@ -84,10 +82,8 @@ class AuthService {
         }
       }
 
-      // Hash password
       final hashedPassword = _hashPassword(password);
 
-      // Insert ke tabel users
       print('Inserting user to database...');
       final response = await _supabase.from('users').insert({
         'username': username,
@@ -123,10 +119,8 @@ class AuthService {
         return false;
       }
 
-      // Hash password untuk compare
       final hashedPassword = _hashPassword(password);
 
-      // Cari user di database
       print('Searching for user: $username');
       final userData = await _supabase
           .from('users')
@@ -138,7 +132,6 @@ class AuthService {
         return false;
       }
 
-      // Verify password
       final user = userData[0];
       final storedPasswordHash = user['password_hash'] as String;
 
@@ -201,7 +194,6 @@ class AuthService {
     return _currentUser != null;
   }
 
-  /// Clear all auth data (untuk testing/debugging)
   Future<void> clearAuthData() async {
     try {
       await logoutAsync();

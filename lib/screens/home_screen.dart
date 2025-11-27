@@ -86,13 +86,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final habits = _habitService.getAllHabits();
     final today = DateTime.now();
+    final activeHabitsToday = _habitService.getActiveHabitsForDate(today);
     final completedCount = _habitService.getCompletedCountForDate(today);
-    final totalCount = _habitService.getTotalCount();
+    final activeCount = activeHabitsToday.length;
     final progress = _habitService.getProgressForDate(today);
 
-    // Get username dari AuthService
     final username = _authService.currentUsername ??
         _authService.currentUser?.username ??
         'User';
@@ -113,7 +112,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Halo, $username!!!',
+                        'Halo, $username 👋',
                         style: TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
@@ -134,7 +133,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 20),
               Text(
-                '$completedCount / $totalCount habit done',
+                '$completedCount / $activeCount habit done',
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
@@ -151,7 +150,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 30),
               Expanded(
-                child: habits.isEmpty
+                child: activeHabitsToday.isEmpty
                     ? Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -165,7 +164,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                             const SizedBox(height: 16),
                             Text(
-                              'Belum ada habit',
+                              'Tidak ada habit hari ini',
                               style: TextStyle(
                                 fontSize: 18,
                                 color: isDark
@@ -176,21 +175,22 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              'Tambahkan habit pertama Anda!',
+                              'Semua habits sudah selesai atau tidak ada scheduled untuk hari ini!',
                               style: TextStyle(
                                 fontSize: 14,
                                 color: isDark
                                     ? Colors.grey[600]
                                     : Colors.grey[400],
                               ),
+                              textAlign: TextAlign.center,
                             ),
                           ],
                         ),
                       )
                     : ListView.builder(
-                        itemCount: habits.length,
+                        itemCount: activeHabitsToday.length,
                         itemBuilder: (context, index) {
-                          final habit = habits[index];
+                          final habit = activeHabitsToday[index];
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 12),
                             child: GestureDetector(

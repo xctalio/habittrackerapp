@@ -76,7 +76,6 @@ class _EditHabitDialogState extends State<EditHabitDialog> {
           onPressed: () {
             final newTitle = _titleController.text.trim();
             if (newTitle.isNotEmpty && newTitle != widget.habit.title) {
-              // Update habit title
               final updatedHabit = Habit(
                 id: widget.habit.id,
                 title: newTitle,
@@ -85,7 +84,6 @@ class _EditHabitDialogState extends State<EditHabitDialog> {
                 completionDates: widget.habit.completionDates,
               );
               
-              // Replace old habit with updated one
               _habitService.updateHabit(widget.habit.id, updatedHabit);
               widget.onUpdate();
               Navigator.pop(context);

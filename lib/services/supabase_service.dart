@@ -7,10 +7,8 @@ class SupabaseService {
 
   final _client = Supabase.instance.client;
 
-  // Auth Methods
   Future<bool> register(String username, String password) async {
     try {
-      // Cek apakah username sudah ada
       final existingUsers = await _client
           .from('users')
           .select()
@@ -27,7 +25,6 @@ class SupabaseService {
       );
 
       if (response.user != null) {
-        // Insert user data ke tabel users
         await _client.from('users').insert({
           'id': response.user!.id,
           'username': username,
@@ -66,7 +63,6 @@ class SupabaseService {
     return _client.auth.currentUser?.id;
   }
 
-  // Habit Methods
   Future<List<Map<String, dynamic>>> getHabits() async {
     try {
       final userId = getCurrentUserId();
@@ -129,7 +125,6 @@ class SupabaseService {
     }
   }
 
-  // Habit Completion Methods
   Future<bool> toggleHabitCompletion(String habitId, String dateKey, bool isCompleted) async {
     try {
       final existing = await _client
@@ -189,7 +184,6 @@ class SupabaseService {
     }
   }
 
-  // Journal Methods
   Future<bool> addJournalEntry(String id, String content, String dateEntry) async {
     try {
       final userId = getCurrentUserId();
