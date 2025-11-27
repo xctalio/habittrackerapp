@@ -24,12 +24,10 @@ class _LoginScreenState extends State<LoginScreen> {
     final username = _usernameController.text.trim();
     final password = _passwordController.text.trim();
 
-    print('LOGIN ATTEMPT');
-    print('Username: $username');
-    print('Password: $password');
+    print('Login attempt: $username');
 
     if (username.isEmpty || password.isEmpty) {
-      print('Username atau password kosong');
+      print('Username or password empty');
       setState(() {
         _showError = true;
         _errorMessage = 'Username dan password harus diisi!';
@@ -43,7 +41,7 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      print('📡 Calling loginAsync...');
+      print('Calling loginAsync...');
       final success = await _authService.loginAsync(username, password);
       print('Login result: $success');
 
@@ -80,6 +78,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
@@ -246,7 +246,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         decoration: TextDecoration.underline,
-                        color: _isLoading ? Colors.grey : Colors.black,
+                        color: _isLoading ? Colors.grey : Colors.cyan[400],
                       ),
                     ),
                   ),
@@ -256,7 +256,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 Padding(
                   padding: const EdgeInsets.only(top: 20),
                   child: Text(
-                    _errorMessage ?? 'Username dan Password Salah !',
+                    _errorMessage ?? 'Username dan Password Salah!',
                     style: TextStyle(color: Colors.red[600]),
                     textAlign: TextAlign.center,
                   ),
