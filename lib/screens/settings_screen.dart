@@ -410,13 +410,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ? const Color(0xFF2C2C2C)
                         : Colors.white,
                     title: Text(
-                      'About Habit Tracker',
+                      'Tentang Habit Tracker',
                       style: TextStyle(
                         color: isDark ? Colors.white : Colors.black,
                       ),
                     ),
                     content: Text(
-                      'Habit Tracker v1.0\n\nA simple and effective app to build better habits with Supabase backend.\n\n© 2024 Habit Tracker. All rights reserved.',
+                      'Habit Tracker v1.0.\n\nKelola rutinitas tanpa hambatan. Desain kami ringkas. Fungsi kami efektif.\n\nInfrastruktur Supabase menjamin performa dan keamanan data.\n\nFokuslah pada progres. Biarkan kami menangani sisanya.\n\n© 2025 Habit Tracker',
                       style: TextStyle(
                         color: isDark ? Colors.white70 : Colors.black87,
                       ),
