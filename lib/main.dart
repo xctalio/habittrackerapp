@@ -3,13 +3,17 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'config/supabase_config.dart';
 import 'screens/login_screen.dart';
 import 'services/theme_service.dart';
+import 'services/notification_service.dart';
+import 'services/notification_settings_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   print('═══════════════════════════════════════');
-  print('   STARTING SUPABASE INITIALIZATION');
+  print('   STARTING APP INITIALIZATION');
   print('═══════════════════════════════════════');
+
+  // Initialize Supabase
   print('Supabase URL: ${SupabaseConfig.url}');
   print('Supabase Key: ${SupabaseConfig.anonKey.substring(0, 20)}...');
 
@@ -18,13 +22,21 @@ void main() async {
       url: SupabaseConfig.url,
       anonKey: SupabaseConfig.anonKey,
     );
-    print('Supabase INITIALIZED SUCCESSFULLY');
-    print('═══════════════════════════════════════');
+    print('✓ Supabase INITIALIZED SUCCESSFULLY');
   } catch (e) {
-    print('SUPABASE INITIALIZATION FAILED:');
-    print('Error: $e');
-    print('═══════════════  ════════════════════════');
+    print('✗ SUPABASE INITIALIZATION FAILED: $e');
   }
+
+  // Initialize Notification Services
+  try {
+    await NotificationSettingsService().initialize();
+    await NotificationService().initialize();
+    print('✓ Notification Services INITIALIZED SUCCESSFULLY');
+  } catch (e) {
+    print('✗ NOTIFICATION INITIALIZATION FAILED: $e');
+  }
+
+  print('═══════════════════════════════════════');
 
   runApp(const HabitTrackerApp());
 }

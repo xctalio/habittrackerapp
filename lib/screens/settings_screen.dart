@@ -4,6 +4,8 @@ import 'login_screen.dart';
 import '../services/auth_service.dart';
 import '../services/theme_service.dart';
 import '../services/habit_service.dart';
+import '../services/notification_service.dart';
+import '../services/notification_settings_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({Key? key}) : super(key: key);
@@ -16,7 +18,174 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final _authService = AuthService();
   final _themeService = ThemeService();
   final _habitService = HabitService();
+  final _notificationService = NotificationService();
+  final _notificationSettings = NotificationSettingsService();
+
   bool _notificationsEnabled = true;
+  bool _dailyReminderEnabled = true;
+  bool _incompleteReminderEnabled = true;
+  bool _streakNotificationsEnabled = true;
+  bool _weeklySummaryEnabled = true;
+  TimeOfDay _dailyReminderTime = const TimeOfDay(hour: 8, minute: 0);
+  TimeOfDay _incompleteReminderTime = const TimeOfDay(hour: 20, minute: 0);
+
+  @override
+  void initState() {
+    super.initState();
+    _loadNotificationSettings();
+  }
+
+  Future<void> _loadNotificationSettings() async {
+    setState(() {
+      _notificationsEnabled = _notificationSettings.notificationsEnabled;
+      _dailyReminderEnabled = _notificationSettings.dailyReminderEnabled;
+      _incompleteReminderEnabled =
+          _notificationSettings.incompleteReminderEnabled;
+      _streakNotificationsEnabled =
+          _notificationSettings.streakNotificationsEnabled;
+      _weeklySummaryEnabled = _notificationSettings.weeklySummaryEnabled;
+      _dailyReminderTime = _notificationSettings.dailyReminderTime;
+      _incompleteReminderTime = _notificationSettings.incompleteReminderTime;
+    });
+  }
+
+  Future<void> _toggleNotifications(bool value) async {
+    if (value) {
+      // Request permission when enabling
+      final granted = await _notificationService.requestPermission();
+      if (!granted) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Permission notifikasi ditolak'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+    }
+
+    setState(() => _notificationsEnabled = value);
+    await _notificationSettings.setNotificationsEnabled(value);
+
+    if (value) {
+      await _scheduleNotifications();
+    } else {
+      await _notificationService.cancelAll();
+    }
+  }
+
+  Future<void> _scheduleNotifications() async {
+    if (_dailyReminderEnabled) {
+      await _notificationService.scheduleDailyReminder(_dailyReminderTime);
+    }
+    if (_incompleteReminderEnabled) {
+      final incompleteHabits = _habitService.getIncompletedHabitsForDate(
+        DateTime.now(),
+      );
+      await _notificationService.scheduleIncompleteReminder(
+        _incompleteReminderTime,
+        incompleteHabits.map((h) => h.title).toList(),
+      );
+    }
+  }
+
+  Future<void> _toggleDailyReminder(bool value) async {
+    setState(() => _dailyReminderEnabled = value);
+    await _notificationSettings.setDailyReminderEnabled(value);
+
+    if (value && _notificationsEnabled) {
+      await _notificationService.scheduleDailyReminder(_dailyReminderTime);
+    } else {
+      await _notificationService.cancelDailyReminder();
+    }
+  }
+
+  Future<void> _toggleIncompleteReminder(bool value) async {
+    setState(() => _incompleteReminderEnabled = value);
+    await _notificationSettings.setIncompleteReminderEnabled(value);
+
+    if (value && _notificationsEnabled) {
+      final incompleteHabits = _habitService.getIncompletedHabitsForDate(
+        DateTime.now(),
+      );
+      await _notificationService.scheduleIncompleteReminder(
+        _incompleteReminderTime,
+        incompleteHabits.map((h) => h.title).toList(),
+      );
+    } else {
+      await _notificationService.cancelIncompleteReminder();
+    }
+  }
+
+  Future<void> _toggleStreakNotifications(bool value) async {
+    setState(() => _streakNotificationsEnabled = value);
+    await _notificationSettings.setStreakNotificationsEnabled(value);
+  }
+
+  Future<void> _toggleWeeklySummary(bool value) async {
+    setState(() => _weeklySummaryEnabled = value);
+    await _notificationSettings.setWeeklySummaryEnabled(value);
+  }
+
+  Future<void> _selectDailyReminderTime() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: _dailyReminderTime,
+    );
+
+    if (picked != null) {
+      setState(() => _dailyReminderTime = picked);
+      await _notificationSettings.setDailyReminderTime(picked);
+
+      if (_notificationsEnabled && _dailyReminderEnabled) {
+        await _notificationService.scheduleDailyReminder(picked);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Daily reminder set for ${_notificationSettings.formatTime(picked)}',
+              ),
+              backgroundColor: Colors.cyan[400],
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _selectIncompleteReminderTime() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: _incompleteReminderTime,
+    );
+
+    if (picked != null) {
+      setState(() => _incompleteReminderTime = picked);
+      await _notificationSettings.setIncompleteReminderTime(picked);
+
+      if (_notificationsEnabled && _incompleteReminderEnabled) {
+        final incompleteHabits = _habitService.getIncompletedHabitsForDate(
+          DateTime.now(),
+        );
+        await _notificationService.scheduleIncompleteReminder(
+          picked,
+          incompleteHabits.map((h) => h.title).toList(),
+        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Incomplete reminder set for ${_notificationSettings.formatTime(picked)}',
+              ),
+              backgroundColor: Colors.cyan[400],
+            ),
+          );
+        }
+      }
+    }
+  }
 
   void _showProfileDialog() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -326,6 +495,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
             Divider(color: Theme.of(context).dividerColor),
+
+            // Main Notifications Toggle
             ListTile(
               leading: Icon(
                 Icons.notifications_outlined,
@@ -337,14 +508,166 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               trailing: Switch(
                 value: _notificationsEnabled,
-                onChanged: (value) {
-                  setState(() {
-                    _notificationsEnabled = value;
-                  });
-                },
+                onChanged: _toggleNotifications,
                 activeColor: Colors.cyan[400],
               ),
             ),
+
+            // Notification sub-settings (only visible when notifications are enabled)
+            if (_notificationsEnabled) ...[
+              // Daily Reminder
+              Padding(
+                padding: const EdgeInsets.only(left: 16),
+                child: ListTile(
+                  leading: Icon(
+                    Icons.wb_sunny_outlined,
+                    color: isDark ? Colors.grey[400] : Colors.grey[600],
+                    size: 20,
+                  ),
+                  title: Text(
+                    'Daily Reminder',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: isDark ? Colors.grey[300] : Colors.grey[700],
+                    ),
+                  ),
+                  subtitle: Text(
+                    _notificationSettings.formatTime(_dailyReminderTime),
+                    style: TextStyle(fontSize: 12, color: Colors.cyan[400]),
+                  ),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: Icon(
+                          Icons.access_time,
+                          color: _dailyReminderEnabled
+                              ? Colors.cyan[400]
+                              : Colors.grey,
+                          size: 20,
+                        ),
+                        onPressed: _dailyReminderEnabled
+                            ? _selectDailyReminderTime
+                            : null,
+                      ),
+                      Switch(
+                        value: _dailyReminderEnabled,
+                        onChanged: _toggleDailyReminder,
+                        activeColor: Colors.cyan[400],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Incomplete Habits Reminder
+              Padding(
+                padding: const EdgeInsets.only(left: 16),
+                child: ListTile(
+                  leading: Icon(
+                    Icons.nights_stay_outlined,
+                    color: isDark ? Colors.grey[400] : Colors.grey[600],
+                    size: 20,
+                  ),
+                  title: Text(
+                    'Incomplete Reminder',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: isDark ? Colors.grey[300] : Colors.grey[700],
+                    ),
+                  ),
+                  subtitle: Text(
+                    _notificationSettings.formatTime(_incompleteReminderTime),
+                    style: TextStyle(fontSize: 12, color: Colors.cyan[400]),
+                  ),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: Icon(
+                          Icons.access_time,
+                          color: _incompleteReminderEnabled
+                              ? Colors.cyan[400]
+                              : Colors.grey,
+                          size: 20,
+                        ),
+                        onPressed: _incompleteReminderEnabled
+                            ? _selectIncompleteReminderTime
+                            : null,
+                      ),
+                      Switch(
+                        value: _incompleteReminderEnabled,
+                        onChanged: _toggleIncompleteReminder,
+                        activeColor: Colors.cyan[400],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Streak Notifications
+              Padding(
+                padding: const EdgeInsets.only(left: 16),
+                child: ListTile(
+                  leading: Icon(
+                    Icons.local_fire_department_outlined,
+                    color: isDark ? Colors.grey[400] : Colors.grey[600],
+                    size: 20,
+                  ),
+                  title: Text(
+                    'Streak Milestones',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: isDark ? Colors.grey[300] : Colors.grey[700],
+                    ),
+                  ),
+                  subtitle: Text(
+                    'Notifikasi saat mencapai streak',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark ? Colors.grey[500] : Colors.grey[600],
+                    ),
+                  ),
+                  trailing: Switch(
+                    value: _streakNotificationsEnabled,
+                    onChanged: _toggleStreakNotifications,
+                    activeColor: Colors.cyan[400],
+                  ),
+                ),
+              ),
+
+              // Weekly Summary
+              Padding(
+                padding: const EdgeInsets.only(left: 16),
+                child: ListTile(
+                  leading: Icon(
+                    Icons.calendar_today_outlined,
+                    color: isDark ? Colors.grey[400] : Colors.grey[600],
+                    size: 20,
+                  ),
+                  title: Text(
+                    'Weekly Summary',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: isDark ? Colors.grey[300] : Colors.grey[700],
+                    ),
+                  ),
+                  subtitle: Text(
+                    'Ringkasan pencapaian mingguan',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark ? Colors.grey[500] : Colors.grey[600],
+                    ),
+                  ),
+                  trailing: Switch(
+                    value: _weeklySummaryEnabled,
+                    onChanged: _toggleWeeklySummary,
+                    activeColor: Colors.cyan[400],
+                  ),
+                ),
+              ),
+            ],
+
             Divider(color: Theme.of(context).dividerColor),
             const SizedBox(height: 12),
 

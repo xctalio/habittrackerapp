@@ -1,6 +1,8 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/habit.dart';
 import 'auth_service.dart';
+import 'notification_service.dart';
+import 'notification_settings_service.dart';
 
 class HabitService {
   static final HabitService _instance = HabitService._internal();
@@ -9,6 +11,8 @@ class HabitService {
 
   final _supabase = Supabase.instance.client;
   final _authService = AuthService();
+  final _notificationService = NotificationService();
+  final _notificationSettings = NotificationSettingsService();
   final List<Habit> _habits = [];
   bool _isInitialized = false;
 
@@ -216,6 +220,19 @@ class HabitService {
 
       habit.toggleCompletionOnDate(date);
       print('Toggled in memory');
+
+      // Check for streak milestones and show notification
+      if (newStatus && _notificationSettings.streakNotificationsEnabled) {
+        final streak = habit.getCurrentStreak();
+        final milestones = [7, 14, 21, 30, 60, 90, 100, 180, 365];
+        if (milestones.contains(streak)) {
+          await _notificationService.showStreakNotification(
+            habit.title,
+            streak,
+          );
+          print('Streak milestone notification shown: $streak days');
+        }
+      }
     } catch (e) {
       print('Error toggling habit: $e');
       rethrow;
