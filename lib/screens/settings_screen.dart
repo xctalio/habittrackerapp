@@ -8,7 +8,7 @@ import '../services/notification_service.dart';
 import '../services/notification_settings_service.dart';
 
 class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({Key? key}) : super(key: key);
+  const SettingsScreen({super.key});
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -491,7 +491,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     _themeService.toggleTheme();
                   });
                 },
-                activeColor: Colors.cyan[400],
+                activeThumbColor: Colors.cyan[400],
               ),
             ),
             Divider(color: Theme.of(context).dividerColor),
@@ -509,7 +509,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               trailing: Switch(
                 value: _notificationsEnabled,
                 onChanged: _toggleNotifications,
-                activeColor: Colors.cyan[400],
+                activeThumbColor: Colors.cyan[400],
               ),
             ),
 
@@ -553,7 +553,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       Switch(
                         value: _dailyReminderEnabled,
                         onChanged: _toggleDailyReminder,
-                        activeColor: Colors.cyan[400],
+                        activeThumbColor: Colors.cyan[400],
                       ),
                     ],
                   ),
@@ -598,7 +598,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       Switch(
                         value: _incompleteReminderEnabled,
                         onChanged: _toggleIncompleteReminder,
-                        activeColor: Colors.cyan[400],
+                        activeThumbColor: Colors.cyan[400],
                       ),
                     ],
                   ),
@@ -631,7 +631,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   trailing: Switch(
                     value: _streakNotificationsEnabled,
                     onChanged: _toggleStreakNotifications,
-                    activeColor: Colors.cyan[400],
+                    activeThumbColor: Colors.cyan[400],
                   ),
                 ),
               ),
@@ -662,7 +662,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   trailing: Switch(
                     value: _weeklySummaryEnabled,
                     onChanged: _toggleWeeklySummary,
-                    activeColor: Colors.cyan[400],
+                    activeThumbColor: Colors.cyan[400],
                   ),
                 ),
               ),

@@ -9,13 +9,13 @@ class HabitTile extends StatelessWidget {
   final VoidCallback onEdit;
 
   const HabitTile({
-    Key? key,
+    super.key,
     required this.habit,
     required this.date,
     required this.onToggle,
     required this.onDelete,
     required this.onEdit,
-  }) : super(key: key);
+  });
 
   Color _getColor() {
     switch (habit.color) {

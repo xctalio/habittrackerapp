@@ -7,10 +7,10 @@ class EditHabitDialog extends StatefulWidget {
   final VoidCallback onUpdate;
 
   const EditHabitDialog({
-    Key? key,
+    super.key,
     required this.habit,
     required this.onUpdate,
-  }) : super(key: key);
+  });
 
   @override
   State<EditHabitDialog> createState() => _EditHabitDialogState();

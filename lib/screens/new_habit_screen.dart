@@ -3,7 +3,7 @@ import '../models/habit.dart';
 import '../services/habit_service.dart';
 
 class NewHabitScreen extends StatefulWidget {
-  const NewHabitScreen({Key? key}) : super(key: key);
+  const NewHabitScreen({super.key});
 
   @override
   State<NewHabitScreen> createState() => _NewHabitScreenState();
@@ -14,7 +14,7 @@ class _NewHabitScreenState extends State<NewHabitScreen> {
   final _habitService = HabitService();
   String _selectedColor = 'cyan';
   String _recurrenceType = 'daily'; // daily, weekly, monthly
-  List<int> _selectedWeekDays = []; // 0=Sunday to 6=Saturday
+  final List<int> _selectedWeekDays = []; // 0=Sunday to 6=Saturday
   int _selectedMonthDay = 1;
 
   final List<Map<String, dynamic>> _colors = [

@@ -3,7 +3,7 @@ import 'package:intl/intl.dart';
 import '../services/habit_service.dart';
 
 class StatsScreen extends StatefulWidget {
-  const StatsScreen({Key? key}) : super(key: key);
+  const StatsScreen({super.key});
 
   @override
   State<StatsScreen> createState() => _StatsScreenState();

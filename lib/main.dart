@@ -42,7 +42,7 @@ void main() async {
 }
 
 class HabitTrackerApp extends StatefulWidget {
-  const HabitTrackerApp({Key? key}) : super(key: key);
+  const HabitTrackerApp({super.key});
 
   @override
   State<HabitTrackerApp> createState() => _HabitTrackerAppState();
