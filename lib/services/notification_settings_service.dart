@@ -9,7 +9,6 @@ class NotificationSettingsService {
 
   SharedPreferences? _prefs;
 
-  // Keys for SharedPreferences
   static const String _notificationsEnabledKey = 'notifications_enabled';
   static const String _dailyReminderEnabledKey = 'daily_reminder_enabled';
   static const String _dailyReminderHourKey = 'daily_reminder_hour';
@@ -23,7 +22,6 @@ class NotificationSettingsService {
       'streak_notifications_enabled';
   static const String _weeklySummaryEnabledKey = 'weekly_summary_enabled';
 
-  // Default values
   static const TimeOfDay defaultDailyReminderTime = TimeOfDay(
     hour: 8,
     minute: 0,
@@ -35,21 +33,19 @@ class NotificationSettingsService {
 
   Future<void> initialize() async {
     _prefs = await SharedPreferences.getInstance();
+    _prefs = await SharedPreferences.getInstance();
   }
 
-  // Master toggle for all notifications
-  bool get notificationsEnabled {
-    return _prefs?.getBool(_notificationsEnabledKey) ?? true;
+  bool get notificationsEnabled {icationsEnabledKey) ?? true;
   }
 
   Future<void> setNotificationsEnabled(bool value) async {
     await _prefs?.setBool(_notificationsEnabledKey, value);
   }
-
-  // Daily reminder settings
-  bool get dailyReminderEnabled {
-    return _prefs?.getBool(_dailyReminderEnabledKey) ?? true;
+    await _prefs?.setBool(_notificationsEnabledKey, value);
   }
+
+  bool get dailyReminderEnabled {
 
   Future<void> setDailyReminderEnabled(bool value) async {
     await _prefs?.setBool(_dailyReminderEnabledKey, value);
@@ -68,11 +64,10 @@ class NotificationSettingsService {
     await _prefs?.setInt(_dailyReminderHourKey, time.hour);
     await _prefs?.setInt(_dailyReminderMinuteKey, time.minute);
   }
-
-  // Incomplete reminder settings
-  bool get incompleteReminderEnabled {
-    return _prefs?.getBool(_incompleteReminderEnabledKey) ?? true;
+    await _prefs?.setInt(_dailyReminderMinuteKey, time.minute);
   }
+
+  bool get incompleteReminderEnabled {
 
   Future<void> setIncompleteReminderEnabled(bool value) async {
     await _prefs?.setBool(_incompleteReminderEnabledKey, value);
@@ -93,38 +88,34 @@ class NotificationSettingsService {
     await _prefs?.setInt(_incompleteReminderMinuteKey, time.minute);
   }
 
-  // Streak notifications
-  bool get streakNotificationsEnabled {
-    return _prefs?.getBool(_streakNotificationsEnabledKey) ?? true;
+    await _prefs?.setInt(_incompleteReminderMinuteKey, time.minute);
   }
 
+  bool get streakNotificationsEnabled {
   Future<void> setStreakNotificationsEnabled(bool value) async {
     await _prefs?.setBool(_streakNotificationsEnabledKey, value);
   }
 
   // Weekly summary
-  bool get weeklySummaryEnabled {
-    return _prefs?.getBool(_weeklySummaryEnabledKey) ?? true;
+    await _prefs?.setBool(_streakNotificationsEnabledKey, value);
   }
 
-  Future<void> setWeeklySummaryEnabled(bool value) async {
+  bool get weeklySummaryEnabled {abled(bool value) async {
     await _prefs?.setBool(_weeklySummaryEnabledKey, value);
   }
 
   // Format time for display
-  String formatTime(TimeOfDay time) {
-    final hour = time.hour.toString().padLeft(2, '0');
-    final minute = time.minute.toString().padLeft(2, '0');
-    return '$hour:$minute';
+    await _prefs?.setBool(_weeklySummaryEnabledKey, value);
   }
+
+  String formatTime(TimeOfDay time) {
 
   // Reset all settings to default
   Future<void> resetToDefaults() async {
-    await setNotificationsEnabled(true);
-    await setDailyReminderEnabled(true);
-    await setDailyReminderTime(defaultDailyReminderTime);
-    await setIncompleteReminderEnabled(true);
-    await setIncompleteReminderTime(defaultIncompleteReminderTime);
+    return '$hour:$minute';
+  }
+
+  Future<void> resetToDefaults() async {ultIncompleteReminderTime);
     await setStreakNotificationsEnabled(true);
     await setWeeklySummaryEnabled(true);
   }

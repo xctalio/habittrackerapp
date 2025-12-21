@@ -2,18 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'config/supabase_config.dart';
 import 'screens/login_screen.dart';
+import 'screens/main_navigation_screen.dart';
 import 'services/theme_service.dart';
 import 'services/notification_service.dart';
 import 'services/notification_settings_service.dart';
+import 'services/auth_service.dart';
+import 'services/habit_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  print('═══════════════════════════════════════');
+  print('===================================');
   print('   STARTING APP INITIALIZATION');
-  print('═══════════════════════════════════════');
+  print('===================================');
 
-  // Initialize Supabase
   print('Supabase URL: ${SupabaseConfig.url}');
   print('Supabase Key: ${SupabaseConfig.anonKey.substring(0, 20)}...');
 
@@ -22,27 +24,38 @@ void main() async {
       url: SupabaseConfig.url,
       anonKey: SupabaseConfig.anonKey,
     );
-    print('✓ Supabase INITIALIZED SUCCESSFULLY');
+    print('Supabase INITIALIZED SUCCESSFULLY');
   } catch (e) {
-    print('✗ SUPABASE INITIALIZATION FAILED: $e');
+    print('SUPABASE INITIALIZATION FAILED: $e');
   }
 
-  // Initialize Notification Services
+  bool hasSession = false;
   try {
-    await NotificationSettingsService().initialize();
-    await NotificationService().initialize();
-    print('✓ Notification Services INITIALIZED SUCCESSFULLY');
+    await AuthService().initialize();
+    hasSession = await AuthService().hasActiveSession();
+    print('Auth Service INITIALIZED - Has session: $hasSession');
   } catch (e) {
-    print('✗ NOTIFICATION INITIALIZATION FAILED: $e');
+    print('AUTH INITIALIZATION FAILED: $e');
+    print('AUTH INITIALIZATION FAILED: $e');
   }
 
-  print('═══════════════════════════════════════');
+  try {it NotificationSettingsService().initialize();
+    await NotificationService().initialize(requestPermission: true);
+    await NotificationService().printDebugInfo();
+    print('Notification Services INITIALIZED SUCCESSFULLY');
+  } catch (e) {
+    print('NOTIFICATION INITIALIZATION FAILED: $e');
+  }
 
-  runApp(const HabitTrackerApp());
+  print('===================================');
+
+  runApp(HabitTrackerApp(hasActiveSession: hasSession));
 }
 
 class HabitTrackerApp extends StatefulWidget {
-  const HabitTrackerApp({super.key});
+  final bool hasActiveSession;
+
+  const HabitTrackerApp({super.key, this.hasActiveSession = false});
 
   @override
   State<HabitTrackerApp> createState() => _HabitTrackerAppState();
@@ -50,11 +63,33 @@ class HabitTrackerApp extends StatefulWidget {
 
 class _HabitTrackerAppState extends State<HabitTrackerApp> {
   final _themeService = ThemeService();
+  bool _isLoading = true;
+  bool _hasSession = false;
 
   @override
   void initState() {
     super.initState();
     _themeService.addListener(_onThemeChanged);
+    _hasSession = widget.hasActiveSession;
+    _initializeApp();
+  }
+
+  Future<void> _initializeApp() async {
+    if (_hasSession) {
+      // Initialize habits for restored session
+      try {
+        await HabitService().initializeHabits();
+        print('✓ Habits initialized for restored session');
+      } catch (e) {
+        print('✗ Failed to initialize habits: $e');
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   @override
@@ -99,7 +134,48 @@ class _HabitTrackerAppState extends State<HabitTrackerApp> {
         ),
       ),
       themeMode: _themeService.isDarkMode ? ThemeMode.dark : ThemeMode.light,
-      home: const LoginScreen(),
+      home: _isLoading
+          ? const _SplashScreen()
+          : (_hasSession ? const MainNavigationScreen() : const LoginScreen()),
+    );
+  }
+}
+
+class _SplashScreen extends StatelessWidget {
+  const _SplashScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Scaffold(
+      backgroundColor: isDark ? const Color(0xFF121212) : Colors.white,
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.check_circle_outline, size: 80, color: Colors.cyan[400]),
+            const SizedBox(height: 24),
+            Text(
+              'Habit Tracker',
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : Colors.black,
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.cyan[400]!),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

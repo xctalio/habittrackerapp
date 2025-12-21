@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:crypto/crypto.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
 class AuthService {
@@ -11,13 +12,102 @@ class AuthService {
   User? _currentUser;
   String? _currentUsername;
   String? _currentUserId;
+  SharedPreferences? _prefs;
+  bool _isInitialized = false;
+
+  static const String _keyUserId = 'auth_user_id';
+  static const String _keyUsername = 'auth_username';
+  static const String _keyIsLoggedIn = 'auth_is_logged_in';
 
   User? get currentUser => _currentUser;
   String? get currentUsername => _currentUsername;
   String? get currentUserId => _currentUserId;
+  bool get isInitialized => _isInitialized;
 
   static String _hashPassword(String password) {
     return sha256.convert(utf8.encode(password)).toString();
+  }
+
+  Future<void> initialize() async {
+    if (_isInitialized) return;
+
+    try {
+      _prefs = await SharedPreferences.getInstance();
+      await _restoreSession();
+      _isInitialized = true;
+      print('AuthService initialized');
+    } catch (e) {
+      print('AuthService initialization error: $e');
+    }
+  }
+
+  Future<bool> _restoreSession() async {
+    try {
+      final isLoggedIn = _prefs?.getBool(_keyIsLoggedIn) ?? false;
+
+      if (isLoggedIn) {
+        final userId = _prefs?.getString(_keyUserId);
+        final username = _prefs?.getString(_keyUsername);
+
+        if (userId != null && username != null) {
+          final userData = await _supabase
+              .from('users')
+              .select('id, username')
+              .eq('id', int.parse(userId))
+              .maybeSingle();
+
+          if (userData != null) {
+            _currentUserId = userId;
+            _currentUsername = username;
+            _currentUser = User(
+              id: userId,
+              username: username,
+              password: '', // Password not stored for security
+            );
+            print('Session restored for user: $username');
+            return true;
+            return true;
+          } else {
+            await _clearSession(); - user not found in database');
+          }
+        }
+      }
+
+      print('No active session found');
+      return false;
+    } catch (e) {
+      print('Session restore error: $e');
+      return false;
+    }
+    }
+  }
+
+  Future<void> _saveSession() async {
+      await _prefs?.setBool(_keyIsLoggedIn, true);
+      await _prefs?.setString(_keyUserId, _currentUserId ?? '');
+      await _prefs?.setString(_keyUsername, _currentUsername ?? '');
+      print('Session saved');
+    } catch (e) {
+      print('Session save error: $e');
+    }
+  }
+    }
+  }
+
+  Future<void> _clearSession() async {dIn);
+      await _prefs?.remove(_keyUserId);
+      await _prefs?.remove(_keyUsername);
+      print('Session cleared');
+    } catch (e) {
+      print('Session clear error: $e');
+    }
+  }
+    }
+  }
+
+  Future<bool> hasActiveSession() async {
+    }
+    return _currentUser != null;
   }
 
   bool register(String username, String password, String confirmPassword) {
@@ -93,11 +183,14 @@ class AuthService {
 
       if (response.isNotEmpty) {
         print('User registered successfully');
-        final userId = response[0]['id'].toString(); // Convert to String
+        final userId = response[0]['id'].toString();
         _currentUser = User(id: userId, username: username, password: password);
         _currentUsername = username;
         _currentUserId = userId;
-        print('User ID: $userId');
+
+        _currentUserId = userId;
+
+        await _saveSession();Id');
         print('=== REGISTER ASYNC SUCCESS ===');
         return true;
       }
@@ -141,7 +234,7 @@ class AuthService {
       }
 
       print('Login successful for user: ${user['username']}');
-      final userId = user['id'].toString(); // Convert to String
+      final userId = user['id'].toString();
       _currentUser = User(
         id: userId,
         username: user['username'] as String,
@@ -149,8 +242,11 @@ class AuthService {
       );
       _currentUsername = user['username'] as String;
       _currentUserId = userId;
-      print('User ID: $userId');
-      print('=== LOGIN ASYNC SUCCESS ===');
+
+      // Save session
+      _currentUserId = userId;
+
+      await _saveSession();C SUCCESS ===');
       return true;
     } catch (e) {
       print('Login async error: $e');
@@ -174,8 +270,11 @@ class AuthService {
       _currentUser = null;
       _currentUsername = null;
       _currentUserId = null;
-      print('Logout successful');
-    } catch (e) {
+
+      // Clear session
+      _currentUserId = null;
+
+      await _clearSession();
       print('Logout error: $e');
     }
   }
@@ -184,6 +283,7 @@ class AuthService {
     _currentUser = null;
     _currentUsername = null;
     _currentUserId = null;
+    _clearSession();
   }
 
   String? getCurrentUserId() {

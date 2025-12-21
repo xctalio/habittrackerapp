@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'new_habit_screen.dart';
 import '../widgets/habit_tile.dart';
 import '../widgets/edit_habit_dialog.dart';
+import '../widgets/notification_widgets.dart';
 import '../services/habit_service.dart';
 import '../services/auth_service.dart';
 
@@ -53,16 +54,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 }
               } catch (e) {
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error: $e')),
-                  );
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text('Error: $e')));
                 }
               }
             },
-            child: Text(
-              'Hapus',
-              style: TextStyle(color: Colors.red[400]),
-            ),
+            child: Text('Hapus', style: TextStyle(color: Colors.red[400])),
           ),
         ],
       ),
@@ -70,8 +68,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showEditDialog(String habitId) {
-    final habit =
-        _habitService.getAllHabits().firstWhere((h) => h.id == habitId);
+    final habit = _habitService.getAllHabits().firstWhere(
+      (h) => h.id == habitId,
+    );
 
     showDialog(
       context: context,
@@ -92,7 +91,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final activeCount = activeHabitsToday.length;
     final progress = _habitService.getProgressForDate(today);
 
-    final username = _authService.currentUsername ??
+    final username =
+        _authService.currentUsername ??
         _authService.currentUser?.username ??
         'User';
 
@@ -108,27 +108,30 @@ class _HomeScreenState extends State<HomeScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Halo, $username 👋',
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: isDark ? Colors.white : Colors.black,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Halo, $username 👋',
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? Colors.white : Colors.black,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        DateFormat('EEEE, dd MMMM yyyy').format(today),
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: isDark ? Colors.grey[400] : Colors.grey[600],
+                        const SizedBox(height: 4),
+                        Text(
+                          DateFormat('EEEE, dd MMMM yyyy').format(today),
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: isDark ? Colors.grey[400] : Colors.grey[600],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
+                  const NotificationBellIcon(),
                 ],
               ),
               const SizedBox(height: 20),
@@ -215,8 +218,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                     await _habitService.deleteHabit(habit.id);
                                     if (mounted) {
                                       setState(() {});
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
                                         SnackBar(
                                           content: const Text('Habit dihapus'),
                                           backgroundColor: isDark
@@ -227,18 +231,22 @@ class _HomeScreenState extends State<HomeScreen> {
                                             textColor: Colors.cyan[400],
                                             onPressed: () async {
                                               try {
-                                                await _habitService
-                                                    .addHabit(habit);
+                                                await _habitService.addHabit(
+                                                  habit,
+                                                );
                                                 if (mounted) {
                                                   setState(() {});
                                                 }
                                               } catch (e) {
                                                 if (mounted) {
-                                                  ScaffoldMessenger.of(context)
-                                                      .showSnackBar(
+                                                  ScaffoldMessenger.of(
+                                                    context,
+                                                  ).showSnackBar(
                                                     SnackBar(
-                                                        content: Text(
-                                                            'Error: $e')),
+                                                      content: Text(
+                                                        'Error: $e',
+                                                      ),
+                                                    ),
                                                   );
                                                 }
                                               }
@@ -249,8 +257,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                     }
                                   } catch (e) {
                                     if (mounted) {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
                                         SnackBar(content: Text('Error: $e')),
                                       );
                                     }
@@ -261,17 +270,19 @@ class _HomeScreenState extends State<HomeScreen> {
                                   date: today,
                                   onToggle: () async {
                                     try {
-                                      await _habitService
-                                          .toggleHabit(habit.id, today);
+                                      await _habitService.toggleHabit(
+                                        habit.id,
+                                        today,
+                                      );
                                       if (mounted) {
                                         setState(() {});
                                       }
                                     } catch (e) {
                                       if (mounted) {
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(
-                                          SnackBar(
-                                              content: Text('Error: $e')),
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          SnackBar(content: Text('Error: $e')),
                                         );
                                       }
                                     }

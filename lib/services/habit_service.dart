@@ -221,7 +221,6 @@ class HabitService {
       habit.toggleCompletionOnDate(date);
       print('Toggled in memory');
 
-      // Check for streak milestones and show notification
       if (newStatus && _notificationSettings.streakNotificationsEnabled) {
         final streak = habit.getCurrentStreak();
         final milestones = [7, 14, 21, 30, 60, 90, 100, 180, 365];

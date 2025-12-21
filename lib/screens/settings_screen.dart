@@ -51,7 +51,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _toggleNotifications(bool value) async {
     if (value) {
-      // Request permission when enabling
       final granted = await _notificationService.requestPermission();
       if (!granted) {
         if (mounted) {
@@ -185,6 +184,163 @@ class _SettingsScreenState extends State<SettingsScreen> {
         }
       }
     }
+  }
+
+  Future<void> _showNotificationStatusDialog() async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final status = await _notificationService.getNotificationStatus();
+
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: isDark ? const Color(0xFF2C2C2C) : Colors.white,
+        title: Row(
+          children: [
+            Icon(
+              status['permissionGranted'] == true
+                  ? Icons.check_circle
+                  : Icons.error,
+              color: status['permissionGranted'] == true
+                  ? Colors.green
+                  : Colors.red,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'Status Notifikasi',
+              style: TextStyle(color: isDark ? Colors.white : Colors.black),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildStatusRow(
+              'Service Initialized',
+              status['isInitialized'] == true,
+              isDark,
+            ),
+            const SizedBox(height: 8),
+            _buildStatusRow(
+              'Permission Granted',
+              status['permissionGranted'] == true,
+              isDark,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Platform: ${status['platform']}',
+              style: TextStyle(
+                color: isDark ? Colors.grey[300] : Colors.grey[700],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Pending Notifications: ${status['pendingNotifications']}',
+              style: TextStyle(
+                color: isDark ? Colors.grey[300] : Colors.grey[700],
+              ),
+            ),
+            if (status['pendingNotifications'] > 0) ...[
+              const SizedBox(height: 4),
+              Text(
+                'IDs: ${status['pendingNotificationIds'].join(', ')}',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: isDark ? Colors.grey[400] : Colors.grey[600],
+                ),
+              ),
+            ],
+            if (status['permissionGranted'] != true) ...[
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.warning, color: Colors.orange, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Izin notifikasi belum diberikan. Aktifkan di Settings HP.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDark
+                              ? Colors.orange[200]
+                              : Colors.orange[800],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+        actions: [
+          if (status['permissionGranted'] != true)
+            TextButton(
+              onPressed: () async {
+                Navigator.pop(context);
+                final granted = await _notificationService.requestPermission();
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        granted
+                            ? '✓ Permission granted!'
+                            : '✗ Permission denied. Please enable in Settings.',
+                      ),
+                      backgroundColor: granted ? Colors.green : Colors.red,
+                    ),
+                  );
+                  setState(() {});
+                }
+              },
+              child: Text(
+                'Request Permission',
+                style: TextStyle(color: Colors.cyan[400]),
+              ),
+            ),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Close', style: TextStyle(color: Colors.cyan[400])),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusRow(String label, bool status, bool isDark) {
+    return Row(
+      children: [
+        Icon(
+          status ? Icons.check_circle : Icons.cancel,
+          size: 16,
+          color: status ? Colors.green : Colors.red,
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            label,
+            style: TextStyle(
+              color: isDark ? Colors.grey[300] : Colors.grey[700],
+            ),
+          ),
+        ),
+        Text(
+          status ? 'Yes' : 'No',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: status ? Colors.green : Colors.red,
+          ),
+        ),
+      ],
+    );
   }
 
   void _showProfileDialog() {
@@ -496,7 +652,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             Divider(color: Theme.of(context).dividerColor),
 
-            // Main Notifications Toggle
             ListTile(
               leading: Icon(
                 Icons.notifications_outlined,
@@ -512,12 +667,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 activeThumbColor: Colors.cyan[400],
               ),
             ),
+            ),
 
-            // Notification sub-settings (only visible when notifications are enabled)
             if (_notificationsEnabled) ...[
-              // Daily Reminder
-              Padding(
-                padding: const EdgeInsets.only(left: 16),
+              Padding(g: const EdgeInsets.only(left: 16),
                 child: ListTile(
                   leading: Icon(
                     Icons.wb_sunny_outlined,
@@ -561,10 +714,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
 
               // Incomplete Habits Reminder
-              Padding(
-                padding: const EdgeInsets.only(left: 16),
-                child: ListTile(
-                  leading: Icon(
+              ),
+
+              Padding(ing: Icon(
                     Icons.nights_stay_outlined,
                     color: isDark ? Colors.grey[400] : Colors.grey[600],
                     size: 20,
@@ -607,10 +759,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
               // Streak Notifications
               Padding(
-                padding: const EdgeInsets.only(left: 16),
-                child: ListTile(
-                  leading: Icon(
-                    Icons.local_fire_department_outlined,
+              ),
+
+              Padding(ons.local_fire_department_outlined,
                     color: isDark ? Colors.grey[400] : Colors.grey[600],
                     size: 20,
                   ),
@@ -638,10 +789,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
               // Weekly Summary
               Padding(
-                padding: const EdgeInsets.only(left: 16),
-                child: ListTile(
-                  leading: Icon(
-                    Icons.calendar_today_outlined,
+              ),
+
+              Padding(ons.calendar_today_outlined,
                     color: isDark ? Colors.grey[400] : Colors.grey[600],
                     size: 20,
                   ),
@@ -663,6 +813,85 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     value: _weeklySummaryEnabled,
                     onChanged: _toggleWeeklySummary,
                     activeThumbColor: Colors.cyan[400],
+                  ),
+                ),
+              ),
+
+              // Test Notification Button
+              Padding(
+                padding: const EdgeInsets.only(left: 16),
+              ),
+
+              Padding(lor: isDark ? Colors.grey[400] : Colors.grey[600],
+                    size: 20,
+                  ),
+                  title: Text(
+                    'Test Notifikasi',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: isDark ? Colors.grey[300] : Colors.grey[700],
+                    ),
+                  ),
+                  subtitle: Text(
+                    'Kirim notifikasi test',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark ? Colors.grey[500] : Colors.grey[600],
+                    ),
+                  ),
+                  trailing: IconButton(
+                    icon: Icon(Icons.send, color: Colors.cyan[400], size: 20),
+                    onPressed: () async {
+                      final success = await _notificationService
+                          .showTestNotification();
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              success
+                                  ? '✓ Test notification sent!'
+                                  : '✗ Failed to send notification. Check permissions.',
+                            ),
+                            backgroundColor: success
+                                ? Colors.green
+                                : Colors.red,
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                ),
+              ),
+
+              // Notification Status Button
+              Padding(
+              ),
+
+              Padding(ons.info_outline,
+                    color: isDark ? Colors.grey[400] : Colors.grey[600],
+                    size: 20,
+                  ),
+                  title: Text(
+                    'Status Notifikasi',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: isDark ? Colors.grey[300] : Colors.grey[700],
+                    ),
+                  ),
+                  subtitle: Text(
+                    'Lihat status sistem notifikasi',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark ? Colors.grey[500] : Colors.grey[600],
+                    ),
+                  ),
+                  trailing: IconButton(
+                    icon: Icon(
+                      Icons.visibility,
+                      color: Colors.cyan[400],
+                      size: 20,
+                    ),
+                    onPressed: () => _showNotificationStatusDialog(),
                   ),
                 ),
               ),
